@@ -175,73 +175,46 @@ $header-h: 52px;
     .hint { font-size: 0.75rem; color: $text-dim; }
   }
 
+  .bill-spinner { display: flex; justify-content: center; padding: 2rem; }
+
   .order-item {
     display: flex;
-    align-items: center;
-    padding: 0.6rem 1rem;
+    flex-direction: column;
+    padding: 0.5rem 1rem;
     border-bottom: 1px solid $border;
-    gap: 0.5rem;
+    gap: 0.2rem;
     transition: background 0.1s;
+    cursor: pointer;
 
     &:hover { background: rgba(255,255,255,0.03); }
 
-    .item-details {
-      flex: 1;
-      min-width: 0;
-
-      .item-code {
-        display: block;
-        font-size: 0.7rem;
-        color: $text-dim;
-      }
-
-      .item-name {
-        display: block;
-        font-size: 0.875rem;
-        color: $text;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
+    &.selected {
+      background: rgba(45, 198, 83, 0.1);
+      border-left: 3px solid $accent2;
     }
 
-    .item-qty-price {
+    &.voided { opacity: 0.45; text-decoration: line-through; }
+    &.return-item { color: #ff9999; }
+
+    .item-row1 {
       display: flex;
       align-items: center;
-      gap: 0.3rem;
-      font-size: 0.8rem;
-      color: $text-muted;
-      white-space: nowrap;
-      flex-shrink: 0;
+      gap: 0.4rem;
 
-      .item-qty { }
-      .item-price { }
+      .item-code { font-size: 0.68rem; color: $text-dim; white-space: nowrap; }
+      .item-name { flex: 1; font-size: 0.875rem; color: $text; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .item-sent { font-size: 0.65rem; color: #ffd166; }
     }
 
-    .item-total {
+    .item-row2 {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      flex-shrink: 0;
-      min-width: 80px;
-      justify-content: flex-end;
-      font-size: 0.9rem;
-      font-weight: 600;
-      font-variant-numeric: tabular-nums;
+      font-size: 0.8rem;
 
-      .remove-btn {
-        background: none;
-        border: none;
-        color: $text-dim;
-        cursor: pointer;
-        padding: 0.15rem;
-        border-radius: 0.25rem;
-        line-height: 1;
-        transition: color 0.1s;
-
-        &:hover { color: $accent; }
-        i { font-size: 0.7rem; }
-      }
+      .item-qty-price { color: $text-muted; flex: 1; }
+      .item-disc { color: #ff9999; font-size: 0.75rem; }
+      .item-nett { font-weight: 700; font-variant-numeric: tabular-nums; color: $text; margin-left: auto; }
     }
   }
 
@@ -272,20 +245,20 @@ $header-h: 52px;
 
   .order-actions {
     display: flex;
-    gap: 0.625rem;
-    padding: 0.75rem 1rem;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.625rem 1rem;
     border-top: 1px solid $border;
     flex-shrink: 0;
 
-    :host ::ng-deep .order-action-btn {
-      flex: 1;
-      justify-content: center;
-    }
+    .action-row { display: flex; gap: 0.4rem; }
 
-    :host ::ng-deep .payment-btn {
-      flex: 2;
-    }
+    :host ::ng-deep .oa-btn { flex: 1; justify-content: center; }
+    :host ::ng-deep .payment-btn { width: 100%; justify-content: center; }
   }
+
+  .session-info { font-size: 0.7rem; color: $text-dim; font-variant-numeric: tabular-nums; }
+  .order-title { font-weight: 700; color: $text-muted; }
 }
 
 // ── Input Panel (Right) ────────────────────────────
@@ -500,9 +473,61 @@ $header-h: 52px;
 // ── PrimeNG overrides ──────────────────────────────
 :host ::ng-deep {
   .order-action-btn .p-button { width: 100%; justify-content: center; }
+  .p-progressspinner { width: 48px; height: 48px; }
+}
 
-  .p-progressspinner {
-    width: 48px;
-    height: 48px;
+// ── Busy overlay ───────────────────────────────────
+.pos-layout.busy { pointer-events: none; opacity: 0.85; }
+.busy-indicator { margin-left: 0.5rem; color: $accent; font-size: 0.85rem; }
+
+// ── Func button variants ───────────────────────────
+.func-btn.dim { opacity: 0.35; cursor: not-allowed; }
+.func-btn.kot { border-color: rgba(255, 209, 102, 0.3); color: #ffd166; &:hover { background: rgba(255,209,102,0.1); } }
+.func-btn:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+
+// ── OTU badge ──────────────────────────────────────
+.otu-badge { color: #74b9ff; }
+
+// ── Receipt print overlay ──────────────────────────
+.receipt-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1rem;
+  z-index: 9999;
+  overflow-y: auto;
+
+  .receipt-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+
+    .rcp-btn {
+      padding: 0.6rem 1.5rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: opacity 0.15s;
+      &:hover { opacity: 0.85; }
+
+      &.print { background: #2dc653; color: #fff; }
+      &.close { background: #666; color: #fff; }
+    }
   }
+}
+
+// ── Print media ────────────────────────────────────
+@media print {
+  .no-print { display: none !important; }
+  .pos-layout { display: none !important; }
+  .pos-loading { display: none !important; }
+  app-receipt { display: block !important; }
 }

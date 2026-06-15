@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using RestPos.Application.Auth;
+using RestPos.Application.Payment;
+using RestPos.Application.Suspend;
+using RestPos.Application.Transaction;
 using RestPos.Data;
 using RestPos.Data.Repositories;
 using System.Text;
@@ -75,9 +78,17 @@ builder.Services.AddScoped<ICashierRepository, CashierRepository>();
 builder.Services.AddScoped<ISysConfigRepository, SysConfigRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 
+// Repositories — Phase 2
+builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<ISuspendRepository, SuspendRepository>();
+
 // Application services
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<TransactionAppService>();
+builder.Services.AddScoped<PaymentAppService>();
+builder.Services.AddScoped<SuspendAppService>();
 
 // ── Pipeline ──────────────────────────────────────────────────
 var app = builder.Build();
