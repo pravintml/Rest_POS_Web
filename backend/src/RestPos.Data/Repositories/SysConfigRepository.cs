@@ -12,12 +12,14 @@ public interface ISysConfigRepository
 public class SysConfigRepository(IDbConnectionFactory db) : ISysConfigRepository
 {
     // Mirrors the SQL from SysConfigService.GetSysConfig(OnLoad)
+    // Only columns that exist in all supported DB versions are selected here;
+    // optional new columns (IsLargeFontInKOTBOT, ServiceCharge, IsOrderTakingUnit) use C# defaults.
     private const string OnLoadSql = @"
         SELECT TOP 1
             [LocationID],[LocationCode],[LocationName],[Zno],[Receipt],[Suspend],[Invoice],
             [UnitNo],[Display],Printer,CashDrawer,[Localhost],[Exchange],[Outlet],[Loyalty],
             [MultipleExch],[KeyBoard],[KeyboardLayer],[CashierPwdMaxLen],[LoyaltyLen],
-            LoyaltyPreFix,VoucherLen,VoucherPreFix,VoucherPreFixLen,isVoucherSaleWithItem,
+            LoyaltyPreFix,VoucherLen,VoucherPreFix,VoucherPreFixLen,IsVoucherSaleWithItem,
             [LogoPrint],[AllowMinus],[AutoSOff],[ValidateCCD],[ValidateVou],
             [IsTouchVersion],[ExchangeCounter],[VOUonCashSale],[IsPromotion],[Xno],
             BoldSubTotal,BarCodeLen,DecimalPointsCurrency,DecimalPointsQty,
@@ -26,9 +28,9 @@ public class SysConfigRepository(IDbConnectionFactory db) : ISysConfigRepository
             IsCrystalReport,IsPrePrintInvoice,IsAllowTransactionAfterCustCopy,
             IsShowDayBookonShiftEnd,IsRePrintDiscountedInvoice,
             [StockOnLIne],[ReceiptInit],[SwpCcd],BankTerminal,[UseCardBank],IsKot,
-            KotPrinterPort,KotInvoice,SharedKotInvoice,IsLargeFontInKOTBOT,
-            PrintItemsOnSus,PrintItemsOnCnl,PrintOffLine,ServiceCharge,
-            DecimalPointsCurrency,DecimalPointsQty
+            KotPrinterPort,KotInvoice,SharedKotInvoice,
+            PrintItemsOnSus,PrintItemsOnCnl,PrintOffLine,
+            Head1,Head2,Head3,Head4,Head5,Tail1,Tail2,Tail3,Tail4,Tail5
         FROM SysConfig
         WHERE LocationID=@LocationID AND UnitNo=@UnitNo";
 

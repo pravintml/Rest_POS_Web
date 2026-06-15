@@ -74,10 +74,10 @@ public class PaymentRepository(IDbConnectionFactory db) : IPaymentRepository
         using var conn = db.Create();
         conn.Open();
         const string sql = @"
-            SELECT PayTypeID, PayTypeName, CAST(1 AS BIT) IsActive
-            FROM PayTypeMaster
-            WHERE LocationID=@LocationID AND IsActive=1
-            ORDER BY SortOrder, PayTypeName";
-        return await conn.QueryAsync<PayTypeDto>(sql, new { LocationID = locationID });
+            SELECT PaymentID PayTypeID, Descrip PayTypeName, IsActive
+            FROM Paytype
+            WHERE IsActive=1
+            ORDER BY OrderNo, Descrip";
+        return await conn.QueryAsync<PayTypeDto>(sql);
     }
 }
