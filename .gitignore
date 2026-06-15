@@ -1,0 +1,40 @@
+# ── .NET ──────────────────────────────────────────────────────
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+[Pp]ublish/
+[Rr]elease/
+[Dd]ebug/
+*.nupkg
+*.snupkg
+*.lock.json
+
+# Secrets & environment-specific config (never commit)
+appsettings.Production.json
+appsettings.Local.json
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+
+# ── Angular / Node ────────────────────────────────────────────
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+yarn-error.log
+.npm
+
+# ── IDE ───────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# ── Logs & temp ───────────────────────────────────────────────
+logs/
+*.log
+*.tmp
