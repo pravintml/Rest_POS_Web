@@ -1,0 +1,206 @@
+.login-wrapper {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  padding: 1rem;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: #1e1e2e;
+  border-radius: 1.5rem;
+  padding: 2rem 1.75rem;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.login-brand {
+  text-align: center;
+  margin-bottom: 1.75rem;
+
+  .brand-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #e63946, #c1121f);
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    box-shadow: 0 8px 24px rgba(230, 57, 70, 0.4);
+
+    i { font-size: 1.75rem; color: #fff; }
+  }
+
+  h1 {
+    color: #fff;
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem;
+    letter-spacing: -0.5px;
+  }
+
+  .brand-subtitle {
+    color: rgba(255,255,255,0.4);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 0;
+  }
+}
+
+.terminal-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+
+  .terminal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.6);
+    border-radius: 2rem;
+    padding: 0.3rem 0.9rem;
+    font-size: 0.8rem;
+
+    i { font-size: 0.75rem; }
+  }
+
+  .link-btn {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.35);
+    font-size: 0.75rem;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+
+    &:hover { color: rgba(255,255,255,0.7); }
+  }
+}
+
+.pin-display {
+  display: flex;
+  justify-content: center;
+  gap: 0.625rem;
+  margin-bottom: 1rem;
+
+  .pin-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.2);
+    transition: all 0.15s ease;
+
+    &.filled {
+      background: #e63946;
+      border-color: #e63946;
+      box-shadow: 0 0 8px rgba(230,57,70,0.6);
+    }
+  }
+}
+
+.error-msg {
+  text-align: center;
+  color: #ff6b6b;
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+
+  i { font-size: 0.875rem; }
+}
+
+.numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+
+  .num-btn {
+    height: 56px;
+    border: none;
+    border-radius: 0.75rem;
+    background: rgba(255,255,255,0.07);
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover { background: rgba(255,255,255,0.13); }
+    &:active { transform: scale(0.94); background: rgba(255,255,255,0.18); }
+
+    &.zero { grid-column: 1 / 3; }
+
+    &.del {
+      background: rgba(230,57,70,0.15);
+      color: #ff6b6b;
+
+      &:hover { background: rgba(230,57,70,0.25); }
+    }
+
+    i { font-size: 1.1rem; }
+  }
+}
+
+.signin-btn { margin-bottom: 0.5rem !important; }
+
+.setup-section {
+  h3 {
+    color: #fff;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+  }
+
+  .setup-hint {
+    color: rgba(255,255,255,0.45);
+    font-size: 0.8rem;
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+  }
+
+  .field {
+    margin-bottom: 1rem;
+
+    label {
+      display: block;
+      color: rgba(255,255,255,0.6);
+      font-size: 0.8rem;
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+}
+
+:host ::ng-deep {
+  .p-button.w-full { width: 100%; }
+
+  .p-inputnumber { width: 100%; }
+
+  .signin-btn {
+    .p-button {
+      background: linear-gradient(135deg, #e63946, #c1121f) !important;
+      border: none !important;
+      font-size: 1rem !important;
+      font-weight: 700 !important;
+      letter-spacing: 1px !important;
+      height: 52px !important;
+    }
+  }
+}

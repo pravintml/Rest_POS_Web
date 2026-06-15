@@ -1,1 +1,18 @@
-/* You can add global styles to this file, and also import other style files */
+/* Global styles — all layout/theming owned by feature components */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #0d0d14;
+}
+
+app-root { display: block; height: 100dvh; }
+
+/* Apply dark mode to PrimeNG — our app is always dark */
+body { @apply-dark-mode: true; }
+html.dark-mode { color-scheme: dark; }

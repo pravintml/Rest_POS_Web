@@ -1,0 +1,75 @@
+<p-toast />
+
+<div class="login-wrapper">
+  <div class="login-card">
+
+    <div class="login-brand">
+      <div class="brand-icon">
+        <i class="pi pi-shopping-cart"></i>
+      </div>
+      <h1>RestPOS</h1>
+      <p class="brand-subtitle">Point of Sale</p>
+    </div>
+
+    @if (showSetup()) {
+      <div class="setup-section">
+        <h3><i class="pi pi-cog"></i> Terminal Setup</h3>
+        <p class="setup-hint">Enter the Location ID and Unit No for this terminal. This is saved on the device.</p>
+
+        <div class="field">
+          <label>Location ID</label>
+          <p-inputnumber [(ngModel)]="setupLocationId" [min]="1" [max]="999" [showButtons]="true" buttonLayout="horizontal"
+            decrementButtonClass="p-button-secondary" incrementButtonClass="p-button-secondary"
+            incrementButtonIcon="pi pi-plus" decrementButtonIcon="pi pi-minus" />
+        </div>
+
+        <div class="field">
+          <label>Unit No</label>
+          <p-inputnumber [(ngModel)]="setupUnitNo" [min]="1" [max]="99" [showButtons]="true" buttonLayout="horizontal"
+            decrementButtonClass="p-button-secondary" incrementButtonClass="p-button-secondary"
+            incrementButtonIcon="pi pi-plus" decrementButtonIcon="pi pi-minus" />
+        </div>
+
+        <p-button label="Save Terminal Config" icon="pi pi-check" styleClass="w-full"
+          (onClick)="saveTerminal()" [disabled]="!setupLocationId || !setupUnitNo" />
+      </div>
+    } @else {
+      <div class="terminal-info">
+        <span class="terminal-badge">
+          <i class="pi pi-desktop"></i>
+          Location {{ terminalConfig()?.locationId }} &bull; Unit {{ terminalConfig()?.unitNo }}
+        </span>
+        <button class="link-btn" (click)="changeTerminal()">Change</button>
+      </div>
+
+      <div class="pin-display">
+        @for (filled of pinMask(); track $index) {
+          <span class="pin-dot" [class.filled]="filled"></span>
+        }
+      </div>
+
+      @if (error()) {
+        <div class="error-msg">
+          <i class="pi pi-exclamation-triangle"></i> {{ error() }}
+        </div>
+      }
+
+      <div class="numpad">
+        @for (key of ['7','8','9','4','5','6','1','2','3']; track key) {
+          <button class="num-btn" (click)="numpadPress(key)">{{ key }}</button>
+        }
+        <button class="num-btn zero" (click)="numpadPress('0')">0</button>
+        <button class="num-btn del" (click)="backspace()">
+          <i class="pi pi-delete-left"></i>
+        </button>
+      </div>
+
+      <p-button label="SIGN IN" icon="pi pi-sign-in" styleClass="w-full signin-btn"
+        (onClick)="signIn()" [loading]="loading()" [disabled]="loading()" />
+
+      <p-button label="Clear" icon="pi pi-times" styleClass="w-full p-button-text p-button-secondary"
+        (onClick)="clearPin()" />
+    }
+
+  </div>
+</div>

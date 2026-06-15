@@ -1,0 +1,179 @@
+<p-toast position="top-right" [life]="2000" />
+
+@if (configLoading()) {
+  <div class="pos-loading">
+    <p-progressspinner strokeWidth="4" />
+    <p>Loading terminal configuration...</p>
+  </div>
+} @else {
+  <div class="pos-layout">
+
+    <!-- ── TOP BAR ── -->
+    <header class="pos-header">
+      <div class="header-left">
+        <span class="pos-brand"><i class="pi pi-shopping-cart"></i> RestPOS</span>
+        <span class="location-name">{{ locationName() }}</span>
+      </div>
+
+      <div class="header-center">
+        <span class="clock">{{ currentTime() | date:'HH:mm:ss' }}</span>
+        <span class="date">{{ currentTime() | date:'EEE, dd MMM yyyy' }}</span>
+      </div>
+
+      <div class="header-right">
+        <div class="cashier-info">
+          <i class="pi pi-user"></i>
+          <span>{{ session()?.name }}</span>
+          <span class="unit-badge">Unit {{ session()?.unitNo }}</span>
+        </div>
+        <p-button icon="pi pi-sign-out" [rounded]="true" [text]="true" severity="secondary"
+          pTooltip="Sign Out" tooltipPosition="bottom"
+          (onClick)="signOut()" />
+      </div>
+    </header>
+
+    <!-- ── MAIN AREA ── -->
+    <div class="pos-main">
+
+      <!-- LEFT: ORDER LIST -->
+      <section class="order-panel">
+        <div class="order-header">
+          <span>Order</span>
+          @if (itemCount() > 0) {
+            <span class="item-count">{{ itemCount() }} item(s)</span>
+          }
+        </div>
+
+        <div class="order-items">
+          @if (orderItems().length === 0) {
+            <div class="order-empty">
+              <i class="pi pi-inbox"></i>
+              <p>No items added</p>
+              <p class="hint">Scan a barcode or enter a product code</p>
+            </div>
+          } @else {
+            @for (item of orderItems(); track item.productID; let i = $index) {
+              <div class="order-item">
+                <div class="item-details">
+                  <span class="item-code">{{ item.productCode }}</span>
+                  <span class="item-name">{{ item.productName }}</span>
+                </div>
+                <div class="item-qty-price">
+                  <span class="item-qty">{{ item.qty }} ×</span>
+                  <span class="item-price">{{ formatCurrency(item.price) }}</span>
+                </div>
+                <div class="item-total">
+                  <span>{{ formatCurrency(item.lineTotal) }}</span>
+                  <button class="remove-btn" (click)="removeItem(i)">
+                    <i class="pi pi-times"></i>
+                  </button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+
+        <div class="order-totals">
+          <div class="total-row">
+            <span>Subtotal</span>
+            <span>{{ formatCurrency(subtotal()) }}</span>
+          </div>
+          @if (totalTax() > 0) {
+            <div class="total-row">
+              <span>Tax</span>
+              <span>{{ formatCurrency(totalTax()) }}</span>
+            </div>
+          }
+          <div class="total-row grand">
+            <span>TOTAL</span>
+            <span>{{ formatCurrency(grandTotal()) }}</span>
+          </div>
+        </div>
+
+        <div class="order-actions">
+          <p-button label="VOID" icon="pi pi-ban" severity="danger"
+            styleClass="order-action-btn" (onClick)="voidOrder()"
+            [disabled]="orderItems().length === 0" />
+          <p-button label="PAYMENT" icon="pi pi-credit-card" severity="success"
+            styleClass="order-action-btn payment-btn"
+            [disabled]="orderItems().length === 0"
+            pTooltip="Payment — Phase 2" tooltipPosition="top" />
+        </div>
+      </section>
+
+      <!-- RIGHT: PRODUCT ENTRY + NUMPAD -->
+      <section class="input-panel">
+
+        <!-- PLU / Barcode entry -->
+        <div class="plu-row">
+          <div class="plu-input-wrap">
+            <i class="pi pi-barcode plu-icon"></i>
+            <input #codeInput type="text" class="plu-input"
+              placeholder="Scan barcode or enter PLU code..."
+              (keydown.enter)="onCodeEnter(codeInput.value)"
+              autocomplete="off" autofocus />
+            @if (productSearching()) {
+              <i class="pi pi-spin pi-spinner plu-spinner"></i>
+            }
+          </div>
+          <p-button label="ENTER" icon="pi pi-check"
+            (onClick)="onCodeEnter(codeInput.value)" />
+        </div>
+
+        <!-- Numpad buffer display -->
+        <div class="numpad-display">
+          <span class="numpad-value">{{ numpadBuffer() || '1' }}</span>
+          <span class="numpad-label">QTY / PRICE</span>
+        </div>
+
+        <!-- Numeric keypad -->
+        <div class="numpad-grid">
+          @for (key of ['7','8','9','4','5','6','1','2','3']; track key) {
+            <button class="nk" (click)="numpadPress(key)">{{ key }}</button>
+          }
+          <button class="nk" (click)="numpadPress('.')">.</button>
+          <button class="nk zero" (click)="numpadPress('0')">0</button>
+          <button class="nk del" (click)="numpadBackspace()">
+            <i class="pi pi-delete-left"></i>
+          </button>
+        </div>
+
+        <!-- Function buttons -->
+        <div class="func-buttons">
+          <button class="func-btn" pTooltip="Discount — Phase 2">
+            <i class="pi pi-percentage"></i><span>DISCOUNT</span>
+          </button>
+          <button class="func-btn" pTooltip="Suspend — Phase 2">
+            <i class="pi pi-pause"></i><span>SUSPEND</span>
+          </button>
+          <button class="func-btn" pTooltip="Recall — Phase 2">
+            <i class="pi pi-replay"></i><span>RECALL</span>
+          </button>
+          <button class="func-btn" pTooltip="Refund — Phase 2">
+            <i class="pi pi-refresh"></i><span>REFUND</span>
+          </button>
+          <button class="func-btn" pTooltip="Pay-In — Phase 2">
+            <i class="pi pi-arrow-circle-down"></i><span>PAY-IN</span>
+          </button>
+          <button class="func-btn" pTooltip="Pay-Out — Phase 2">
+            <i class="pi pi-arrow-circle-up"></i><span>PAY-OUT</span>
+          </button>
+        </div>
+
+        <!-- Session info strip -->
+        @if (config()) {
+          <div class="session-strip">
+            <span><i class="pi pi-receipt"></i> Receipt #{{ config()!.receipt }}</span>
+            <span><i class="pi pi-list"></i> Z #{{ config()!.zno }}</span>
+            @if (config()!.isKot) {
+              <span class="kot-badge"><i class="pi pi-send"></i> KOT</span>
+            }
+          </div>
+        }
+
+      </section>
+
+    </div><!-- end pos-main -->
+
+  </div><!-- end pos-layout -->
+}

@@ -1,0 +1,508 @@
+// ── Variables ──────────────────────────────────────
+$bg: #0d0d14;
+$surface: #1a1a28;
+$surface2: #21213a;
+$border: rgba(255, 255, 255, 0.07);
+$accent: #e63946;
+$accent2: #2dc653;
+$text: #e8e8f0;
+$text-muted: rgba(232, 232, 240, 0.45);
+$text-dim: rgba(232, 232, 240, 0.22);
+$header-h: 52px;
+
+// ── Layout ─────────────────────────────────────────
+.pos-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: $bg;
+  color: $text;
+  font-family: 'Inter', -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+.pos-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100dvh;
+  gap: 1rem;
+  background: $bg;
+  color: $text-muted;
+}
+
+// ── Header ─────────────────────────────────────────
+.pos-header {
+  height: $header-h;
+  background: $surface;
+  border-bottom: 1px solid $border;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  gap: 1rem;
+  flex-shrink: 0;
+  z-index: 10;
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    flex: 1;
+
+    .pos-brand {
+      font-size: 1rem;
+      font-weight: 700;
+      color: $accent;
+      white-space: nowrap;
+      i { margin-right: 0.3rem; }
+    }
+
+    .location-name {
+      font-size: 0.8rem;
+      color: $text-muted;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .header-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+
+    .clock {
+      font-size: 1rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: $text;
+    }
+
+    .date {
+      font-size: 0.7rem;
+      color: $text-muted;
+    }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    justify-content: flex-end;
+
+    .cashier-info {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.825rem;
+      color: $text-muted;
+
+      i { font-size: 0.8rem; }
+
+      .unit-badge {
+        background: rgba(255,255,255,0.07);
+        border-radius: 0.25rem;
+        padding: 0.1rem 0.4rem;
+        font-size: 0.7rem;
+        color: $text-dim;
+      }
+    }
+  }
+}
+
+// ── Main ───────────────────────────────────────────
+.pos-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  gap: 0;
+}
+
+// ── Order Panel (Left) ─────────────────────────────
+.order-panel {
+  display: flex;
+  flex-direction: column;
+  width: 55%;
+  border-right: 1px solid $border;
+  overflow: hidden;
+
+  .order-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.625rem 1rem;
+    background: $surface;
+    border-bottom: 1px solid $border;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: $text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+
+    .item-count {
+      color: $accent;
+      font-size: 0.75rem;
+    }
+  }
+
+  .order-items {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem 0;
+
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  }
+
+  .order-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    color: $text-dim;
+    text-align: center;
+    gap: 0.5rem;
+
+    i { font-size: 2.5rem; }
+    p { margin: 0; font-size: 0.9rem; }
+    .hint { font-size: 0.75rem; color: $text-dim; }
+  }
+
+  .order-item {
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid $border;
+    gap: 0.5rem;
+    transition: background 0.1s;
+
+    &:hover { background: rgba(255,255,255,0.03); }
+
+    .item-details {
+      flex: 1;
+      min-width: 0;
+
+      .item-code {
+        display: block;
+        font-size: 0.7rem;
+        color: $text-dim;
+      }
+
+      .item-name {
+        display: block;
+        font-size: 0.875rem;
+        color: $text;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    .item-qty-price {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.8rem;
+      color: $text-muted;
+      white-space: nowrap;
+      flex-shrink: 0;
+
+      .item-qty { }
+      .item-price { }
+    }
+
+    .item-total {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+      min-width: 80px;
+      justify-content: flex-end;
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+
+      .remove-btn {
+        background: none;
+        border: none;
+        color: $text-dim;
+        cursor: pointer;
+        padding: 0.15rem;
+        border-radius: 0.25rem;
+        line-height: 1;
+        transition: color 0.1s;
+
+        &:hover { color: $accent; }
+        i { font-size: 0.7rem; }
+      }
+    }
+  }
+
+  .order-totals {
+    border-top: 1px solid $border;
+    padding: 0.625rem 1rem;
+    flex-shrink: 0;
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.2rem 0;
+      font-size: 0.825rem;
+      color: $text-muted;
+
+      &.grand {
+        margin-top: 0.4rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid $border;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: $text;
+        font-variant-numeric: tabular-nums;
+      }
+    }
+  }
+
+  .order-actions {
+    display: flex;
+    gap: 0.625rem;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid $border;
+    flex-shrink: 0;
+
+    :host ::ng-deep .order-action-btn {
+      flex: 1;
+      justify-content: center;
+    }
+
+    :host ::ng-deep .payment-btn {
+      flex: 2;
+    }
+  }
+}
+
+// ── Input Panel (Right) ────────────────────────────
+.input-panel {
+  display: flex;
+  flex-direction: column;
+  width: 45%;
+  padding: 0.75rem;
+  gap: 0.625rem;
+  overflow-y: auto;
+  background: $surface2;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+}
+
+.plu-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+
+  .plu-input-wrap {
+    position: relative;
+    flex: 1;
+
+    .plu-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: $text-muted;
+      font-size: 0.9rem;
+    }
+
+    .plu-input {
+      width: 100%;
+      padding: 0.625rem 2.5rem;
+      background: $surface;
+      border: 1px solid $border;
+      border-radius: 0.625rem;
+      color: $text;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+      box-sizing: border-box;
+
+      &:focus { border-color: rgba(255,255,255,0.25); }
+      &::placeholder { color: $text-dim; }
+    }
+
+    .plu-spinner {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: $accent;
+      font-size: 0.9rem;
+    }
+  }
+}
+
+.numpad-display {
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .numpad-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: $text;
+  }
+
+  .numpad-label {
+    font-size: 0.7rem;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.numpad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+
+  .nk {
+    height: 52px;
+    border: 1px solid $border;
+    border-radius: 0.625rem;
+    background: $surface;
+    color: $text;
+    font-size: 1.1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.15); }
+    &:active { transform: scale(0.93); background: rgba(255,255,255,0.15); }
+
+    &.zero { grid-column: 1 / 3; }
+
+    &.del {
+      background: rgba(230,57,70,0.1);
+      color: #ff6b6b;
+      border-color: rgba(230,57,70,0.2);
+
+      &:hover { background: rgba(230,57,70,0.2); }
+    }
+
+    i { font-size: 1rem; }
+  }
+}
+
+.func-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin-top: 0.125rem;
+
+  .func-btn {
+    height: 48px;
+    border: 1px solid $border;
+    border-radius: 0.625rem;
+    background: rgba(255,255,255,0.03);
+    color: $text-muted;
+    font-size: 0.65rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.1s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+
+    &:hover { background: rgba(255,255,255,0.08); color: $text; }
+    &:active { transform: scale(0.95); }
+
+    i { font-size: 0.875rem; }
+    span { line-height: 1; }
+  }
+}
+
+.session-strip {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid $border;
+  border-radius: 0.5rem;
+  margin-top: auto;
+
+  span {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    color: $text-dim;
+
+    i { font-size: 0.7rem; }
+  }
+
+  .kot-badge {
+    color: #ffd166;
+    margin-left: auto;
+  }
+}
+
+// ── Responsive ─────────────────────────────────────
+@media (max-width: 768px) {
+  .pos-main {
+    flex-direction: column;
+  }
+
+  .order-panel {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid $border;
+    height: 55%;
+  }
+
+  .input-panel {
+    width: 100%;
+    height: 45%;
+    overflow-y: auto;
+
+    .numpad-grid .nk { height: 42px; }
+    .func-buttons .func-btn { height: 40px; }
+  }
+}
+
+@media (max-width: 480px) {
+  .pos-header {
+    .header-center .date { display: none; }
+    .cashier-info .unit-badge { display: none; }
+    .location-name { display: none; }
+  }
+}
+
+// ── PrimeNG overrides ──────────────────────────────
+:host ::ng-deep {
+  .order-action-btn .p-button { width: 100%; justify-content: center; }
+
+  .p-progressspinner {
+    width: 48px;
+    height: 48px;
+  }
+}
