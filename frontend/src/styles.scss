@@ -13,6 +13,4 @@ html, body {
 
 app-root { display: block; height: 100dvh; }
 
-/* Apply dark mode to PrimeNG — our app is always dark */
-body { @apply-dark-mode: true; }
 html.dark-mode { color-scheme: dark; }
