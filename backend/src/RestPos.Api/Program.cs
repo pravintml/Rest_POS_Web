@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using RestPos.Application.Auth;
+using RestPos.Data;
+using RestPos.Data.Repositories;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -61,6 +64,20 @@ builder.Services.AddCors(options =>
 
 // Health checks
 builder.Services.AddHealthChecks();
+
+// Data layer — connection factory (connection string from appsettings)
+var connString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("DefaultConnection not configured");
+builder.Services.AddSingleton<IDbConnectionFactory>(_ => new SqlConnectionFactory(connString));
+
+// Repositories
+builder.Services.AddScoped<ICashierRepository, CashierRepository>();
+builder.Services.AddScoped<ISysConfigRepository, SysConfigRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+
+// Application services
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<JwtTokenService>();
 
 // ── Pipeline ──────────────────────────────────────────────────
 var app = builder.Build();
