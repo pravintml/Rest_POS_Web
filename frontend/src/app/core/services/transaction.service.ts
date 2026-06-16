@@ -4,7 +4,8 @@ import { environment } from '../../../environments/environment';
 import {
   AddItemRequest, BillSummaryDto, DiscountRequest,
   VoidItemRequest, ErrorCorrectRequest, VoidBillRequest,
-  ChangePriceRequest, SaveInvoiceRequest, CancelInvoiceRequest, SendKotRequest
+  ChangePriceRequest, SaveInvoiceRequest, CancelInvoiceRequest, SendKotRequest,
+  DecreaseQtyRequest, SplitQtyRequest, DiscountRemoveRequest
 } from '../models/transaction.models';
 
 const BASE = `${environment.apiUrl}/api/transaction`;
@@ -62,6 +63,26 @@ export class TransactionService {
 
   sendKot(req: SendKotRequest) {
     return this.http.post<void>(`${BASE}/send-kot`, req);
+  }
+
+  decreaseQty(req: DecreaseQtyRequest) {
+    return this.http.post<void>(`${BASE}/decrease-qty`, req);
+  }
+
+  splitQty(req: SplitQtyRequest) {
+    return this.http.post<void>(`${BASE}/split-qty`, req);
+  }
+
+  removeDiscount(req: DiscountRemoveRequest) {
+    return this.http.post<void>(`${BASE}/remove-discount`, req);
+  }
+
+  removeServiceCharge(locationIDBilling: number, tableID: number, ticketID: number) {
+    const params = new HttpParams()
+      .set('locationIDBilling', locationIDBilling)
+      .set('tableID', tableID)
+      .set('ticketID', ticketID);
+    return this.http.delete<void>(`${BASE}/service-charge`, { params });
   }
 
   saveStatus(receipt: string, transStatus: number, docNo = '') {

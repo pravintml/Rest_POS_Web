@@ -43,6 +43,10 @@ export interface SysConfig {
   suspendPrint: boolean;
   printItemsOnSus: boolean;
   printItemsOnCnl: boolean;
+  isLoadSteward: boolean;
+  serviceCharge: number;
+  isLayaway: boolean;
+  isPrintInvoice: boolean;
 }
 
 export interface PrintConfig {

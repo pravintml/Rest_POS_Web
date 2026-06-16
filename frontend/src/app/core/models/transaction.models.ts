@@ -185,3 +185,31 @@ export interface SendKotRequest {
   ticketID: number;
   orderTerminalID: number;
 }
+
+export interface DecreaseQtyRequest {
+  locationID: number;
+  locationIDBilling: number;
+  tableID: number;
+  ticketID: number;
+  productID: number;
+  rowNo: number;
+}
+
+export interface SplitQtyRequest {
+  locationID: number;
+  locationIDBilling: number;
+  tableID: number;
+  ticketID: number;
+  productID: number;
+  rowNo: number;
+  qty: number;
+}
+
+export interface DiscountRemoveRequest {
+  locationID: number;
+  productCode: string;
+  locationIDBilling: number;
+  tableID: number;
+  ticketID: number;
+  rowNo: number;
+}

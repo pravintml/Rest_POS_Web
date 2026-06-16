@@ -25,6 +25,12 @@
     <div class="header-left">
       <span class="pos-brand"><i class="pi pi-shopping-cart"></i> SoftVinz Rest POS</span>
       <span class="location-name">{{ locationName() }}</span>
+      @if (tableName()) {
+        <span class="table-badge"><i class="pi pi-table"></i> {{ tableName() }}</span>
+      }
+      @if (stewardName()) {
+        <span class="steward-badge"><i class="pi pi-user"></i> {{ stewardName() }}</span>
+      }
     </div>
     <div class="header-center">
       <span class="clock">{{ currentTime() | date:'HH:mm:ss' }}</span>
@@ -41,38 +47,233 @@
     </div>
   </header>
 
-  <!-- ── MAIN AREA ────────────────────────────────────────────────────── -->
+  <!-- ── SELECTION OVERLAYS ────────────────────────────────────────────── -->
+  @if (selectionStage() !== 'pos') {
+    <div class="sel-overlay">
+      @if (selectionLoading()) {
+        <div class="sel-loading"><p-progressspinner strokeWidth="4" /></div>
+      }
+
+      <!-- Location Selection -->
+      @if (selectionStage() === 'location') {
+        <div class="sel-panel">
+          <div class="sel-title"><i class="pi pi-map-marker"></i> Select Billing Location</div>
+          <div class="sel-grid">
+            @for (loc of billingLocations(); track loc.locationId) {
+              <button class="sel-btn location-btn" (click)="onLocationSelected(loc)">
+                <i class="pi pi-building"></i>
+                <span>{{ loc.name }}</span>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Table Selection -->
+      @if (selectionStage() === 'tables') {
+        <div class="sel-panel">
+          <div class="sel-title">
+            <i class="pi pi-table"></i> Select Table
+            <span class="sel-subtitle">{{ locationIDBillingName() }}</span>
+          </div>
+          <div class="sel-grid tables-grid">
+            @for (tbl of tables(); track tbl.tableID) {
+              <button class="sel-btn table-btn" (click)="onTableSelected(tbl)">
+                {{ tbl.tableName }}
+              </button>
+            }
+          </div>
+          <div class="sel-back">
+            <button class="sel-back-btn" (click)="selectionStage.set('location')">
+              <i class="pi pi-arrow-left"></i> Back to Locations
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- Ticket Selection -->
+      @if (selectionStage() === 'tickets') {
+        <div class="sel-panel">
+          <div class="sel-title">
+            <i class="pi pi-ticket"></i> Select Ticket — {{ tableName() }}
+          </div>
+          <div class="sel-tickets">
+            @for (tkt of tickets(); track tkt.ticketID) {
+              <button class="sel-btn ticket-btn" (click)="onTicketSelected(tkt)">
+                <span class="tkt-id">Ticket #{{ tkt.ticketID }}</span>
+                <span class="tkt-amount">{{ tkt.amount | number:'1.2-2' }}</span>
+                @if (tkt.stewardName) {
+                  <span class="tkt-steward"><i class="pi pi-user"></i> {{ tkt.stewardName }}</span>
+                }
+              </button>
+            }
+            <button class="sel-btn new-ticket-btn" (click)="onNewTicketForTable()">
+              <i class="pi pi-plus"></i> New Ticket
+            </button>
+          </div>
+          <div class="sel-back">
+            <button class="sel-back-btn" (click)="selectionStage.set('tables')">
+              <i class="pi pi-arrow-left"></i> Back to Tables
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- Steward Selection -->
+      @if (selectionStage() === 'steward') {
+        <div class="sel-panel">
+          <div class="sel-title"><i class="pi pi-users"></i> Select Steward</div>
+          <div class="sel-grid steward-grid">
+            @for (sw of stewards(); track sw.stewardID) {
+              <button class="sel-btn steward-btn" (click)="onStewardSelected(sw)">
+                <i class="pi pi-user"></i>
+                <span>{{ sw.stewardName }}</span>
+              </button>
+            }
+          </div>
+          <div class="sel-back">
+            <button class="sel-back-btn" (click)="selectionStage.set('tables')">
+              <i class="pi pi-arrow-left"></i> Back to Tables
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ── MAIN POS AREA (visible only when in 'pos' stage) ─────────────── -->
+  @if (selectionStage() === 'pos') {
   <div class="pos-main">
 
-    <!-- LEFT: ORDER LIST ─────────────────────────────────────────────── -->
-    <section class="order-panel">
-      <div class="order-header">
-        <span class="order-title">Order</span>
-        <span class="session-info">
-          R#{{ config()?.receipt ?? '' }} &nbsp;|&nbsp; Z#{{ config()?.zno ?? '' }}
-        </span>
-        @if (itemCount() > 0) {
-          <span class="item-count">{{ itemCount() | number:'1.0-2' }} items</span>
+    <!-- LEFT: ACTION BUTTONS + PLU + NUMPAD ────────────────────────────── -->
+    <section class="action-panel">
+      <div class="action-grid">
+        @if (!showMore()) {
+          <!-- ── Main panel ── -->
+          <button class="act-btn" (click)="newBill()" [disabled]="busy()">NEW</button>
+          <div class="act-btn dim">CUSTOMER</div>
+          <div class="act-btn-row">
+            <button class="act-btn half" (click)="increaseQty()" [disabled]="!selectedLine() || busy()">+</button>
+            <button class="act-btn half" (click)="decreaseQty()" [disabled]="!selectedLine() || busy()">-</button>
+          </div>
+          <div class="act-btn dim">COMMENT</div>
+          <button class="act-btn danger"
+            (click)="voidSelectedItem()" [disabled]="!selectedLine() || busy()">
+            VOID
+          </button>
+          <button class="act-btn"
+            (click)="removeServiceCharge()" [disabled]="orderItems().length === 0 || busy()">
+            REMOVE SERVICE CHARGE
+          </button>
+          <button class="act-btn danger-outline"
+            (click)="voidBill()" [disabled]="orderItems().length === 0 || busy()">
+            CLEAR
+          </button>
+          <button class="act-btn" (click)="resetToTables()" [disabled]="busy()">
+            CHANGE TABLE
+          </button>
+          <button class="act-btn"
+            (click)="splitQty()" [disabled]="!selectedLine() || busy()">
+            SPLIT QTY
+          </button>
+          <div class="act-btn dim">MOVE</div>
+          <div class="act-btn dim">MERGE</div>
+          <div class="act-btn dim">TAG</div>
+          <div class="act-btn dim">PACKS</div>
+          <div class="act-btn dim">MOBILE NO</div>
+          <button class="act-btn more-btn" (click)="showMore.set(true)">MORE</button>
+        } @else {
+          <!-- ── More panel ── -->
+          <button class="act-btn less-btn" (click)="showMore.set(false)">
+            <i class="pi pi-arrow-left"></i> LESS
+          </button>
+          <div class="act-btn dim">BACKUP DB</div>
+          <div class="act-btn dim">PAID OUT</div>
+          <div class="act-btn dim">PAID IN</div>
+          <div class="act-btn dim">MENU</div>
+          <button class="act-btn" (click)="reprintInvoice()">REPRINT INVOICE</button>
+          <div class="act-btn dim">SHIFT END</div>
+          <button class="act-btn less-btn" (click)="showMore.set(false)">CANCEL</button>
+          <button class="act-btn"
+            (click)="removeDiscount()" [disabled]="!selectedLine() || busy()">
+            REMOVE DISCOUNT
+          </button>
+          <button class="act-btn"
+            (click)="openDiscount()" [disabled]="!selectedLine() || busy()">
+            DISCOUNT%
+          </button>
+          <button class="act-btn"
+            (click)="openDiscount()" [disabled]="!selectedLine() || busy()">
+            DISCOUNT
+          </button>
+          <div class="act-btn dim">DISCOUNT LEVEL</div>
+          <button class="act-btn"
+            (click)="openChangePrice()" [disabled]="!selectedLine() || busy()">
+            CHANGE PRICE
+          </button>
         }
       </div>
 
-      <!-- Item list -->
-      <div class="order-items" [class.loading]="billLoading()">
+      <!-- PLU / Barcode entry -->
+      <div class="plu-row">
+        <div class="plu-input-wrap">
+          <i class="pi pi-barcode plu-icon"></i>
+          <input #codeInput type="text" class="plu-input"
+            placeholder="PLU / barcode…"
+            (keydown.enter)="onCodeEnter(codeInput.value)"
+            autocomplete="off" autofocus />
+          @if (productSearching()) {
+            <i class="pi pi-spin pi-spinner plu-spinner"></i>
+          }
+        </div>
+        <button class="plu-enter-btn" (click)="onCodeEnter(codeInput.value)">ENT</button>
+      </div>
+
+      <!-- Numpad -->
+      <div class="numpad-section">
+        <div class="numpad-grid">
+          @for (key of ['7','8','9','4','5','6','1','2','3']; track key) {
+            <button class="nk" (click)="numpadPress(key)">{{ key }}</button>
+          }
+          <button class="nk" (click)="numpadPress('.')">.</button>
+          <button class="nk nk-zero" (click)="numpadPress('0')">0</button>
+          <button class="nk nk-del" (click)="numpadBackspace()">
+            <i class="pi pi-delete-left"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- MIDDLE: ORDER LIST ──────────────────────────────────────────────── -->
+    <section class="order-panel">
+
+      <div class="order-header" (click)="toggleBillMobile()">
+        <span class="order-title">ORDER</span>
+        <span class="session-info">R#{{ config()?.receipt ?? '' }} | Z#{{ config()?.zno ?? '' }}</span>
+        @if (itemCount() > 0) {
+          <span class="item-count">{{ itemCount() | number:'1.0-0' }} ITEMS</span>
+        }
+        <i class="pi pi-chevron-up mobile-bill-toggle"
+           [class.rotated]="showBillMobile()"></i>
+      </div>
+
+      <div class="order-items" [class.loading]="billLoading()"
+           [class.mobile-expanded]="showBillMobile()">
         @if (billLoading()) {
-          <div class="bill-spinner"><p-progressspinner strokeWidth="4" [style]="{ width: '40px', height: '40px' }" /></div>
+          <div class="bill-spinner"><p-progressspinner strokeWidth="4" [style]="{ width: '36px', height: '36px' }" /></div>
         } @else if (orderItems().length === 0) {
           <div class="order-empty">
             <i class="pi pi-inbox"></i>
-            <p>No items — scan or enter PLU code</p>
+            <p>No items yet</p>
           </div>
         } @else {
           @for (item of orderItems(); track item.rowNo) {
-            <div class="order-item" [class.selected]="selectedRowNo() === item.rowNo"
+            <div class="order-item"
+                 [class.selected]="selectedRowNo() === item.rowNo"
                  [class.voided]="item.documentID === 5"
                  [class.return-item]="item.documentID === 2 || item.documentID === 4"
                  (click)="selectRow(item)">
               <div class="item-row1">
-                <span class="item-code">{{ item.productCode }}</span>
                 <span class="item-name">{{ item.descrip }}</span>
                 @if (item.isPrinted) { <i class="pi pi-send item-sent" pTooltip="KOT sent"></i> }
               </div>
@@ -88,7 +289,6 @@
         }
       </div>
 
-      <!-- Totals -->
       <div class="order-totals">
         <div class="total-row grand">
           <span>TOTAL</span>
@@ -96,94 +296,28 @@
         </div>
       </div>
 
-      <!-- Order actions -->
-      <div class="order-actions">
-        <div class="action-row">
-          <p-button label="VOID ITEM" icon="pi pi-ban" severity="danger" size="small"
-            styleClass="oa-btn" (onClick)="voidSelectedItem()"
-            [disabled]="!selectedLine() || busy()" />
-          <p-button label="VOID BILL" icon="pi pi-trash" severity="danger" [outlined]="true" size="small"
-            styleClass="oa-btn" (onClick)="voidBill()"
-            [disabled]="orderItems().length === 0 || busy()" />
-        </div>
-        <p-button label="PAYMENT" icon="pi pi-credit-card" severity="success"
-          styleClass="oa-btn payment-btn" (onClick)="openPayment()"
-          [disabled]="orderItems().length === 0 || busy()" />
-      </div>
-    </section>
-
-    <!-- RIGHT: PRODUCT ENTRY + NUMPAD ───────────────────────────────── -->
-    <section class="input-panel">
-
-      <!-- PLU / Barcode entry -->
-      <div class="plu-row">
-        <div class="plu-input-wrap">
-          <i class="pi pi-barcode plu-icon"></i>
-          <input #codeInput type="text" class="plu-input"
-            placeholder="Scan barcode or enter PLU code…"
-            (keydown.enter)="onCodeEnter(codeInput.value)"
-            autocomplete="off" autofocus />
-          @if (productSearching()) {
-            <i class="pi pi-spin pi-spinner plu-spinner"></i>
-          }
-        </div>
-        <p-button label="ENTER" icon="pi pi-check" (onClick)="onCodeEnter(codeInput.value)" />
-      </div>
-
-      <!-- Numpad display -->
-      <div class="numpad-display">
-        <span class="numpad-value">{{ numpadBuffer() || '1' }}</span>
-        <span class="numpad-label">QTY</span>
-        @if (busy()) { <span class="busy-indicator"><i class="pi pi-spin pi-spinner"></i></span> }
-      </div>
-
-      <!-- Numeric keypad -->
-      <div class="numpad-grid">
-        @for (key of ['7','8','9','4','5','6','1','2','3']; track key) {
-          <button class="nk" (click)="numpadPress(key)">{{ key }}</button>
-        }
-        <button class="nk" (click)="numpadPress('.')">.</button>
-        <button class="nk zero" (click)="numpadPress('0')">0</button>
-        <button class="nk del" (click)="numpadBackspace()"><i class="pi pi-delete-left"></i></button>
-      </div>
-
-      <!-- Function buttons -->
-      <div class="func-buttons">
-        <button class="func-btn" (click)="openDiscount()" [disabled]="!selectedLine()">
-          <i class="pi pi-percentage"></i><span>DISCOUNT</span>
-        </button>
-        @if (config()?.isKot) {
-          <button class="func-btn kot" (click)="sendKot()" [disabled]="busy()">
-            <i class="pi pi-send"></i><span>SEND KOT</span>
+      <div class="order-btns">
+        <div class="order-btns-row">
+          <div class="ob-btn ob-copy">COPY</div>
+          <button class="ob-btn ob-payment"
+            (click)="openPayment()" [disabled]="orderItems().length === 0 || busy()">
+            <i class="pi pi-credit-card"></i> PAYMENT
           </button>
-        }
-        <button class="func-btn" (click)="openSuspend()" [disabled]="orderItems().length === 0 || busy()">
-          <i class="pi pi-pause"></i><span>SUSPEND</span>
-        </button>
-        <button class="func-btn" (click)="openRecall()" [disabled]="busy()">
-          <i class="pi pi-replay"></i><span>RECALL</span>
-        </button>
-        <button class="func-btn dim" disabled pTooltip="Phase 3">
-          <i class="pi pi-refresh"></i><span>REFUND</span>
-        </button>
-        <button class="func-btn dim" disabled pTooltip="Phase 3">
-          <i class="pi pi-arrow-down-left"></i><span>PAY-IN</span>
-        </button>
-        <button class="func-btn dim" disabled pTooltip="Phase 3">
-          <i class="pi pi-arrow-up-right"></i><span>PAY-OUT</span>
-        </button>
+        </div>
+        <div class="ob-btn ob-layaway">LAYAWAY</div>
       </div>
 
-      <!-- Session strip -->
-      @if (config()) {
-        <div class="session-strip">
-          @if (config()!.isKot) { <span class="kot-badge"><i class="pi pi-send"></i> KOT</span> }
-          @if (config()!.isOrderTakingUnit) { <span class="otu-badge"><i class="pi pi-mobile"></i> OTU</span> }
-        </div>
-      }
-
     </section>
+
+    <!-- RIGHT: PRODUCT BROWSER ─────────────────────────────────────────── -->
+    <section class="input-panel">
+      <app-product-browser
+        [locationIDBilling]="locationIDBilling()"
+        (productSelected)="onBrowserProductSelected($event)" />
+    </section>
+
   </div><!-- end pos-main -->
+  }<!-- end @if pos stage -->
 
 </div><!-- end pos-layout -->
 }

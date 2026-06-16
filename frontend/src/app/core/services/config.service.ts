@@ -24,4 +24,11 @@ export class ConfigService {
   getPrintFooter() {
     return this.http.get<SysConfig>(`${environment.apiUrl}/api/config/print-footer`);
   }
+
+  // Loads operative config from the selected billing counter (Counters table)
+  loadCounterConfig(billingLocationId: number) {
+    return this.http.get<SysConfig>(
+      `${environment.apiUrl}/api/config/counter`, { params: { billingLocationId } }
+    ).pipe(tap(config => this._config.set(config)));
+  }
 }

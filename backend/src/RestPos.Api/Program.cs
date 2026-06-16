@@ -77,6 +77,7 @@ builder.Services.AddSingleton<IDbConnectionFactory>(_ => new SqlConnectionFactor
 builder.Services.AddScoped<ICashierRepository, CashierRepository>();
 builder.Services.AddScoped<ISysConfigRepository, SysConfigRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IMasterRepository, MasterRepository>();
 
 // Repositories — Phase 2
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();

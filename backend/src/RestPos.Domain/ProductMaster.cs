@@ -17,6 +17,8 @@ public class ProductMaster
     public string ReferenceCode2 { get; set; } = string.Empty;
     public string ProductName { get; set; } = string.Empty;
     public string NameOnInvoice { get; set; } = string.Empty;
+    public long ItemLayer1ID { get; set; }
+    public long ItemLayer2ID { get; set; }
     public long DepartmentID { get; set; }
     public long CategoryID { get; set; }
     public long SubCategoryID { get; set; }

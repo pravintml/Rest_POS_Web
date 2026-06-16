@@ -35,4 +35,12 @@ public class ConfigController(ISysConfigRepository sysConfigRepo) : ControllerBa
         var config = await sysConfigRepo.GetPrintFooterAsync(locationId, unitNo);
         return config is null ? NotFound() : Ok(config);
     }
+
+    // Operative POS config for the selected billing counter (from Counters table)
+    [HttpGet("counter")]
+    public async Task<IActionResult> GetCounterConfig([FromQuery] int billingLocationId)
+    {
+        var config = await sysConfigRepo.GetCounterConfigAsync(billingLocationId);
+        return config is null ? NotFound($"Counter not found: {billingLocationId}") : Ok(config);
+    }
 }

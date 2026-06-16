@@ -34,7 +34,7 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
     {
         using var conn = db.Create();
         conn.Open();
-        var rows = await conn.ExecuteAsync("spTempItemUpdate", new
+        var result = await conn.QueryFirstOrDefaultAsync<string>("spTempItemUpdate", new
         {
             r.LocationID, r.ProductID, r.ProductCode, r.RefCode, r.BarCodeFull, r.Descrip,
             Cost = r.Cost, Price = r.Price, Qty = r.Qty,
@@ -50,14 +50,14 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
             r.StewardID, r.StewardName,
             CurrentRowNo = r.CurrentRowNo, r.TagNo, r.MobileNo, IsApp = 0
         }, commandType: CommandType.StoredProcedure);
-        return rows >= 0;
+        return result == "0";
     }
 
     public async Task<bool> DiscountUpdateAsync(DiscountRequest r)
     {
         using var conn = db.Create();
         conn.Open();
-        var rows = await conn.ExecuteAsync("spTempDiscountUpdate", new
+        var result = await conn.QueryFirstOrDefaultAsync<string>("spTempDiscountUpdate", new
         {
             r.LocationID, r.DocumentID, r.Receipt, r.CashierID, r.UnitNo,
             r.Discount, r.IsPercentage, r.IsSubTotal, r.DiscountID,
@@ -66,44 +66,43 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
             r.CustomerType, r.TransStatus, r.IsPromotion,
             r.LocationIDBilling, r.TableID, r.TicketID, r.RowNo
         }, commandType: CommandType.StoredProcedure);
-        return rows >= 0;
+        return result == "0";
     }
 
     public async Task<bool> VoidItemAsync(VoidItemRequest r)
     {
         using var conn = db.Create();
         conn.Open();
-        var rows = await conn.ExecuteAsync("spItemVoid", new
+        var result = await conn.QueryFirstOrDefaultAsync<string>("spItemVoid", new
         {
             r.LocationID, r.ProductID, r.Qty, r.DocumentID, r.Receipt,
             r.CashierID, r.Cashier, r.UnitNo, r.RowNo, isBillSeek = r.IsBillSeek,
             r.LocationIDBilling, r.TableID, r.TicketID, appUserName = r.AppUserName
         }, commandType: CommandType.StoredProcedure);
-        return rows >= 0;
+        return result == "0";
     }
 
     public async Task<bool> ErrorCorrectAsync(ErrorCorrectRequest r)
     {
         using var conn = db.Create();
         conn.Open();
-        var rows = await conn.ExecuteAsync("spErrorCorrection", new
+        var result = await conn.QueryFirstOrDefaultAsync<string>("spErrorCorrection", new
         {
             r.LocationID, r.ProductID, r.Qty, r.DocumentID, r.Receipt,
             r.CashierID, r.Cashier, r.UnitNo, r.RowNo
         }, commandType: CommandType.StoredProcedure);
-        return rows >= 0;
+        return result == "0";
     }
 
     public async Task<bool> ClearItemsAsync(VoidBillRequest r)
     {
         using var conn = db.Create();
         conn.Open();
-        // Clear items and payment in one connection
-        await conn.ExecuteAsync("spClearItems", new
+        await conn.QueryFirstOrDefaultAsync<string>("spClearItems", new
         {
             r.LocationID, r.LocationIDBilling, r.TableID, r.TicketID
         }, commandType: CommandType.StoredProcedure);
-        await conn.ExecuteAsync("spClearPayment", new
+        await conn.QueryFirstOrDefaultAsync<string>("spClearPayment", new
         {
             r.LocationID, r.LocationIDBilling, r.TableID, r.TicketID
         }, commandType: CommandType.StoredProcedure);
@@ -114,47 +113,47 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
     {
         using var conn = db.Create();
         conn.Open();
-        var rows = await conn.ExecuteAsync("spChangePrice", new
+        var result = await conn.QueryFirstOrDefaultAsync<string>("spChangePrice", new
         {
             r.LocationID, r.LocationIDBilling, r.TableID, r.TicketID,
             r.ProductID, r.RowNo, r.Price
         }, commandType: CommandType.StoredProcedure);
-        return rows >= 0;
+        return result == "0";
     }
 
     public async Task<bool> DecreaseQtyAsync(DecreaseQtyRequest r)
     {
         using var conn = db.Create();
         conn.Open();
-        var rows = await conn.ExecuteAsync("spDecreseQty", new
+        var result = await conn.QueryFirstOrDefaultAsync<string>("spDecreseQty", new
         {
             r.LocationID, r.LocationIDBilling, r.TableID, r.TicketID,
             r.ProductID, r.RowNo
         }, commandType: CommandType.StoredProcedure);
-        return rows >= 0;
+        return result == "0";
     }
 
     public async Task<bool> SplitQtyAsync(SplitQtyRequest r)
     {
         using var conn = db.Create();
         conn.Open();
-        var rows = await conn.ExecuteAsync("spSplitQty", new
+        var result = await conn.QueryFirstOrDefaultAsync<string>("spSplitQty", new
         {
             r.LocationID, r.LocationIDBilling, r.TableID, r.TicketID,
             r.ProductID, r.RowNo, r.Qty
         }, commandType: CommandType.StoredProcedure);
-        return rows >= 0;
+        return result == "0";
     }
 
     public async Task<bool> DiscountRemoveAsync(DiscountRemoveRequest r)
     {
         using var conn = db.Create();
         conn.Open();
-        var rows = await conn.ExecuteAsync("spDiscountRemove", new
+        var result = await conn.QueryFirstOrDefaultAsync<string>("spDiscountRemove", new
         {
             r.LocationID, r.ProductCode, r.LocationIDBilling, r.TableID, r.TicketID, r.RowNo
         }, commandType: CommandType.StoredProcedure);
-        return rows >= 0;
+        return result == "0";
     }
 
     public async Task<string> SaveInvoiceAsync(SaveInvoiceRequest r)
@@ -221,38 +220,38 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
     {
         using var conn = db.Create();
         conn.Open();
-        var rows = await conn.ExecuteAsync("spServiceChargeUpdate", new
+        var result = await conn.QueryFirstOrDefaultAsync<string>("spServiceChargeUpdate", new
         {
             r.LocationID, r.Receipt, r.CashierID, r.Cashier, r.UnitNo,
             r.LocationIDBilling, r.TableID, r.TicketID,
             r.StewardID, r.StewardName, r.ServiceCharge,
             DecimalPointsCurrency = r.DecimalPointsCurrency
         }, commandType: CommandType.StoredProcedure);
-        return rows >= 0;
+        return result == "0";
     }
 
     public async Task<bool> ServiceChargeRemoveAsync(int locationID, int locationIDBilling, int tableID, long ticketID)
     {
         using var conn = db.Create();
         conn.Open();
-        var rows = await conn.ExecuteAsync("spServiceChargeRemove", new
+        var result = await conn.QueryFirstOrDefaultAsync<string>("spServiceChargeRemove", new
         {
             LocationID = locationID, LocationIDBilling = locationIDBilling,
             TableID = tableID, TicketID = ticketID
         }, commandType: CommandType.StoredProcedure);
-        return rows >= 0;
+        return result == "0";
     }
 
     public async Task<bool> SaveTransactionAsync(int locationID, string receipt, int unitNo, long cashierID, int transStatus, string docNo)
     {
         using var conn = db.Create();
         conn.Open();
-        var rows = await conn.ExecuteAsync("spSaveTransaction", new
+        var result = await conn.QueryFirstOrDefaultAsync<string>("spSaveTransaction", new
         {
             LocationID = locationID, Receipt = receipt, UnitNo = unitNo,
             CashierID = cashierID, TransStatus = transStatus, DocNo = docNo
         }, commandType: CommandType.StoredProcedure);
-        return rows >= 0;
+        return result == "0";
     }
 
     public async Task<BillSummaryDto> GetBillSummaryAsync(int locationID, int locationIDBilling, int tableID, long ticketID, int unitNo, string receipt, int documentID, int decimalPoints)
@@ -271,7 +270,7 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
                    TaxAmount, IsTax, TaxPercentage, IsPrinted,
                    ISNULL(ItemComment,'') ItemComment,
                    ISNULL(TagNo,'') TagNo,
-                   ISNULL(StewardID,'0') StewardID, ISNULL(StewardName,'') StewardName,
+                   ISNULL(CAST(StewardID AS VARCHAR(10)),'0') StewardID, ISNULL(StewardName,'') StewardName,
                    ISNULL(Packs,1) Packs, StartTime, RecDate,
                    ISNULL(MobileNo,'') MobileNo
             FROM TempItemDet
