@@ -44,3 +44,16 @@ export interface ItemWiseRow {
 // Report type constants matching backend ReportType param
 export const REPORT_CASHIER_READING = 1;
 export const REPORT_X_READING       = 2;
+
+// Generic table report (used by all non-reading reports)
+export interface ReportSection {
+  title: string;
+  headers: string[];
+  rows: string[][];
+  footer?: string[];
+}
+export interface TableReportDto {
+  reportTitle: string;
+  sections: ReportSection[];
+  generatedAt: string;
+}

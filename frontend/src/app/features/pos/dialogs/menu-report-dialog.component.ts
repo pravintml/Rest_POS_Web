@@ -6,13 +6,35 @@ import { CommonModule } from '@angular/common';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ReportService } from '../../../core/services/report.service';
 import {
-  MenuItemDto, SalesReadingDto, BillWiseRow, ItemWiseRow,
+  MenuItemDto, SalesReadingDto, TableReportDto,
   REPORT_CASHIER_READING, REPORT_X_READING
 } from '../../../core/models/report.models';
 
-type ReportKind = 'none' | 'reading' | 'bill-wise' | 'item-wise';
+type ReportKind = 'none' | 'reading' | 'table';
 
-const SUPPORTED = new Set([1, 13, 17, 40]);
+const SUPPORTED = new Set([
+  1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+  17, 18, 25, 26, 27, 28, 40, 41, 43, 44
+]);
+
+const MENU_PATH: Record<number, string> = {
+  3:  'suspend',
+  4:  'pending-suspend',
+  5:  'suspend-recall',
+  6:  'cancellation',
+  7:  'discount',
+  8:  'loyalty',
+  9:  'credit-card',
+  25: 'non-cash',
+  10: 'staff-purchase',
+  11: 'gift-voucher',
+  28: 'gift-card',
+  12: 'paidout',
+  27: 'paid-in',
+  18: 'salesman',
+  26: 'non-sales',
+  44: 'sales-including-pending',
+};
 
 @Component({
   selector: 'app-menu-report-dialog',
@@ -31,9 +53,6 @@ const SUPPORTED = new Set([1, 13, 17, 40]);
               <button class="mr-act-btn" (click)="printReport()">
                 <i class="pi pi-print"></i> Print
               </button>
-              <button class="mr-act-btn" (click)="clearReport()">
-                <i class="pi pi-arrow-left"></i> Back
-              </button>
             }
             <button class="mr-close-btn" (click)="close()"><i class="pi pi-times"></i></button>
           </div>
@@ -41,26 +60,24 @@ const SUPPORTED = new Set([1, 13, 17, 40]);
 
         <div class="mr-body">
 
-          <!-- LEFT: report menu (hidden when a report is shown) -->
-          @if (reportKind() === 'none') {
-            <div class="mr-menu">
-              @if (menuLoading()) {
-                <div class="mr-center"><p-progressspinner strokeWidth="4" /></div>
-              } @else {
-                @for (item of menuItems(); track item.menuID) {
-                  <button class="mr-menu-btn"
-                    [class.supported]="isSupported(item.menuID)"
-                    [class.active]="activeMenuID() === item.menuID"
-                    (click)="selectReport(item)">
-                    <span class="mr-menu-name">{{ item.menuName }}</span>
-                    @if (!isSupported(item.menuID)) {
-                      <span class="mr-badge">soon</span>
-                    }
-                  </button>
-                }
+          <!-- LEFT: report menu (always visible) -->
+          <div class="mr-menu">
+            @if (menuLoading()) {
+              <div class="mr-center"><p-progressspinner strokeWidth="4" /></div>
+            } @else {
+              @for (item of menuItems(); track item.menuID) {
+                <button class="mr-menu-btn"
+                  [class.supported]="isSupported(item.menuID)"
+                  [class.active]="activeMenuID() === item.menuID"
+                  (click)="selectReport(item)">
+                  <span class="mr-menu-name">{{ item.menuName }}</span>
+                  @if (!isSupported(item.menuID)) {
+                    <span class="mr-badge">soon</span>
+                  }
+                </button>
               }
-            </div>
-          }
+            }
+          </div>
 
           <!-- RIGHT: report content -->
           <div class="mr-content">
@@ -69,8 +86,8 @@ const SUPPORTED = new Set([1, 13, 17, 40]);
 
             } @else if (reportKind() === 'none') {
               <div class="mr-placeholder">
-                <i class="pi pi-arrow-left"></i>
-                <p>Select a report from the list</p>
+                <i class="pi pi-chart-bar"></i>
+                <p>Select a report from the menu</p>
               </div>
 
             } @else if (reportKind() === 'reading' && readingData()) {
@@ -129,52 +146,47 @@ const SUPPORTED = new Set([1, 13, 17, 40]);
                 </table>
               </div>
 
-            } @else if (reportKind() === 'bill-wise') {
+            } @else if (reportKind() === 'table' && tableReport()) {
               <div class="mr-table-wrap" id="printable-report">
-                <div class="rpt-title">Bill Wise Report</div>
-                <table class="rpt-table rpt-grid">
-                  <thead><tr>
-                    <th>Receipt</th><th>Cashier</th><th>Pay Type</th>
-                    <th class="rpt-num">Amount</th>
-                  </tr></thead>
-                  <tbody>
-                    @for (r of billWiseRows(); track r.receipt + r.payType) {
-                      <tr>
-                        <td>{{ r.receipt }}</td>
-                        <td>{{ r.cashier }}</td>
-                        <td>{{ r.payType }}</td>
-                        <td class="rpt-num">{{ fmt(r.amount) }}</td>
-                      </tr>
+                <div class="rpt-title">{{ tableReport()!.reportTitle }}</div>
+                <div class="rpt-time">{{ tableReport()!.generatedAt }}</div>
+                @for (sec of tableReport()!.sections; track $index) {
+                  @if (tableReport()!.sections.length > 1 && sec.title) {
+                    <div class="rpt-section-hdr">{{ sec.title }}</div>
+                  }
+                  <table class="rpt-table rpt-grid">
+                    @if (sec.headers.length > 0) {
+                      <thead><tr>
+                        @for (h of sec.headers; track $index) {
+                          <th [class.rpt-num]="isRightAlign(h)">{{ h }}</th>
+                        }
+                      </tr></thead>
                     }
-                    @if (billWiseRows().length === 0) {
-                      <tr><td colspan="4" class="rpt-empty">No bills found</td></tr>
+                    <tbody>
+                      @for (row of sec.rows; track $index) {
+                        <tr>
+                          @for (cell of row; track $index) {
+                            <td [class.rpt-num]="isRightAlign(cell)">{{ cell }}</td>
+                          }
+                        </tr>
+                      }
+                      @if (sec.rows.length === 0) {
+                        <tr>
+                          <td [attr.colspan]="sec.headers.length || 1" class="rpt-empty">
+                            No data
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                    @if (sec.footer && sec.footer.length > 0) {
+                      <tfoot><tr class="rpt-footer-row">
+                        @for (f of sec.footer; track $index) {
+                          <td [class.rpt-num]="isRightAlign(f)">{{ f }}</td>
+                        }
+                      </tr></tfoot>
                     }
-                  </tbody>
-                </table>
-              </div>
-
-            } @else if (reportKind() === 'item-wise') {
-              <div class="mr-table-wrap" id="printable-report">
-                <div class="rpt-title">Item Wise Sales Report</div>
-                <table class="rpt-table rpt-grid">
-                  <thead><tr>
-                    <th>Category</th><th>Item</th>
-                    <th class="rpt-num">Qty</th><th class="rpt-num">Amount</th>
-                  </tr></thead>
-                  <tbody>
-                    @for (r of itemWiseRows(); track r.itemName) {
-                      <tr>
-                        <td>{{ r.category }}</td>
-                        <td>{{ r.itemName }}</td>
-                        <td class="rpt-num">{{ r.qty | number:'1.0-3' }}</td>
-                        <td class="rpt-num">{{ fmt(r.amount) }}</td>
-                      </tr>
-                    }
-                    @if (itemWiseRows().length === 0) {
-                      <tr><td colspan="4" class="rpt-empty">No items found</td></tr>
-                    }
-                  </tbody>
-                </table>
+                  </table>
+                }
               </div>
             }
           </div>
@@ -257,19 +269,25 @@ const SUPPORTED = new Set([1, 13, 17, 40]);
     }
     .mr-placeholder i { font-size: 2rem; }
 
-    .mr-reading, .mr-table-wrap { max-width: 600px; margin: 0 auto; }
+    .mr-reading, .mr-table-wrap { max-width: 700px; margin: 0 auto; }
     .rpt-title {
       font-size: 1.1rem; font-weight: 700; color: #e2e8f0;
       text-align: center; margin-bottom: 0.25rem;
     }
     .rpt-time { font-size: 0.8rem; color: #64748b; text-align: center; margin-bottom: 1rem; }
-    .rpt-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; color: #cbd5e1; }
+    .rpt-section-hdr {
+      font-size: 0.82rem; font-weight: 600; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin: 1rem 0 0.4rem; padding-bottom: 0.25rem;
+      border-bottom: 1px solid #2d2d4e;
+    }
+    .rpt-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; color: #cbd5e1; margin-bottom: 1rem; }
     .rpt-table td { padding: 0.3rem 0.5rem; }
     .rpt-table th {
       padding: 0.4rem 0.5rem; text-align: left;
       color: #94a3b8; font-size: 0.8rem; border-bottom: 1px solid #2d2d4e;
     }
-    .rpt-num { text-align: right; font-variant-numeric: tabular-nums; }
+    .rpt-num { text-align: right !important; font-variant-numeric: tabular-nums; }
     .rpt-sub td { color: #64748b; font-size: 0.83rem; padding-left: 1.25rem; }
     .rpt-total td { font-weight: 700; color: #a5b4fc; font-size: 0.95rem; }
     .rpt-section td {
@@ -279,6 +297,10 @@ const SUPPORTED = new Set([1, 13, 17, 40]);
     .rpt-divider td { border-top: 1px solid #2d2d4e; padding: 0; height: 1px; }
     .rpt-grid { border: 1px solid #2d2d4e; border-radius: 6px; overflow: hidden; }
     .rpt-grid tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+    .rpt-footer-row td {
+      font-weight: 700; color: #a5b4fc; border-top: 1px solid #2d2d4e;
+      padding: 0.4rem 0.5rem;
+    }
     .rpt-empty { text-align: center; color: #475569; padding: 1.5rem !important; }
 
     @media print {
@@ -287,6 +309,7 @@ const SUPPORTED = new Set([1, 13, 17, 40]);
       .mr-header, .mr-menu { display: none !important; }
       .mr-content { color: black; }
       .rpt-table, .rpt-table td, .rpt-table th { color: black; border-color: #ccc; }
+      .rpt-footer-row td { color: black; }
     }
   `]
 })
@@ -305,8 +328,7 @@ export class MenuReportDialogComponent implements OnChanges {
   readonly reportKind    = signal<ReportKind>('none');
   readonly reportTitle   = signal('');
   readonly readingData   = signal<SalesReadingDto | null>(null);
-  readonly billWiseRows  = signal<BillWiseRow[]>([]);
-  readonly itemWiseRows  = signal<ItemWiseRow[]>([]);
+  readonly tableReport   = signal<TableReportDto | null>(null);
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['visible']?.currentValue === true) {
@@ -325,61 +347,68 @@ export class MenuReportDialogComponent implements OnChanges {
 
   isSupported(menuID: number) { return SUPPORTED.has(menuID); }
 
+  isRightAlign(value: string): boolean {
+    return /^-?[\d,]+(\.\d+)?$/.test((value ?? '').trim());
+  }
+
   selectReport(item: MenuItemDto) {
     if (!SUPPORTED.has(item.menuID)) return;
     this.activeMenuID.set(item.menuID);
     this.reportLoading.set(true);
+    this.reportKind.set('none');
+
+    const setTable = (dto: TableReportDto) => {
+      this.tableReport.set(dto);
+      this.reportKind.set('table');
+      this.reportLoading.set(false);
+    };
+    const setReading = (data: SalesReadingDto, title: string) => {
+      this.readingData.set(data);
+      this.reportTitle.set(title);
+      this.reportKind.set('reading');
+      this.reportLoading.set(false);
+    };
+    const onErr = () => this.reportLoading.set(false);
 
     switch (item.menuID) {
       case 17:
         this.reportSvc.getSalesReading(this.locationIDBilling, this.shiftNo, REPORT_CASHIER_READING)
-          .subscribe({
-            next: data => {
-              this.readingData.set(data);
-              this.reportTitle.set('CASHIER READING');
-              this.reportKind.set('reading');
-              this.reportLoading.set(false);
-            },
-            error: () => this.reportLoading.set(false)
-          });
+          .subscribe({ next: d => setReading(d, 'CASHIER READING'), error: onErr });
         break;
-
       case 13:
         this.reportSvc.getSalesReading(this.locationIDBilling, this.shiftNo, REPORT_X_READING)
-          .subscribe({
-            next: data => {
-              this.readingData.set(data);
-              this.reportTitle.set('X READING');
-              this.reportKind.set('reading');
-              this.reportLoading.set(false);
-            },
-            error: () => this.reportLoading.set(false)
-          });
+          .subscribe({ next: d => setReading(d, 'X READING'), error: onErr });
         break;
-
+      case 14:
+        this.reportSvc.getZReading(this.locationIDBilling, this.shiftNo)
+          .subscribe({ next: d => setReading(d, 'Z READING'), error: onErr });
+        break;
       case 1:
-        this.reportSvc.getBillWise(this.locationIDBilling, this.shiftNo)
-          .subscribe({
-            next: rows => {
-              this.billWiseRows.set(rows);
-              this.reportKind.set('bill-wise');
-              this.reportLoading.set(false);
-            },
-            error: () => this.reportLoading.set(false)
-          });
+        this.reportSvc.getBillWiseAsTable(this.locationIDBilling, this.shiftNo)
+          .subscribe({ next: setTable, error: onErr });
         break;
-
       case 40:
-        this.reportSvc.getItemWise(this.locationIDBilling, this.shiftNo)
-          .subscribe({
-            next: rows => {
-              this.itemWiseRows.set(rows);
-              this.reportKind.set('item-wise');
-              this.reportLoading.set(false);
-            },
-            error: () => this.reportLoading.set(false)
-          });
+        this.reportSvc.getItemWiseAsTable(this.locationIDBilling, this.shiftNo)
+          .subscribe({ next: setTable, error: onErr });
         break;
+      case 43:
+        this.reportSvc.getPendingItemWise(this.locationIDBilling)
+          .subscribe({ next: setTable, error: onErr });
+        break;
+      case 41:
+        this.reportSvc.getDayBook()
+          .subscribe({ next: setTable, error: onErr });
+        break;
+      default: {
+        const path = MENU_PATH[item.menuID];
+        if (path) {
+          this.reportSvc.getTableReport(path, this.locationIDBilling, this.shiftNo)
+            .subscribe({ next: setTable, error: onErr });
+        } else {
+          this.reportLoading.set(false);
+        }
+        break;
+      }
     }
   }
 
@@ -387,8 +416,7 @@ export class MenuReportDialogComponent implements OnChanges {
     this.reportKind.set('none');
     this.activeMenuID.set(null);
     this.readingData.set(null);
-    this.billWiseRows.set([]);
-    this.itemWiseRows.set([]);
+    this.tableReport.set(null);
   }
 
   printReport() { window.print(); }
