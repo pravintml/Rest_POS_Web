@@ -3,6 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using RestPos.Application.Auth;
 using RestPos.Application.Payment;
+using RestPos.Application.Reports;
 using RestPos.Application.Suspend;
 using RestPos.Application.Transaction;
 using RestPos.Data;
@@ -83,6 +84,7 @@ builder.Services.AddScoped<IMasterRepository, MasterRepository>();
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<ISuspendRepository, SuspendRepository>();
+builder.Services.AddScoped<IReportRepository, ReportRepository>();
 
 // Application services
 builder.Services.AddScoped<AuthService>();
@@ -90,6 +92,7 @@ builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<TransactionAppService>();
 builder.Services.AddScoped<PaymentAppService>();
 builder.Services.AddScoped<SuspendAppService>();
+builder.Services.AddScoped<ReportAppService>();
 
 // ── Pipeline ──────────────────────────────────────────────────
 var app = builder.Build();

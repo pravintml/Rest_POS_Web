@@ -70,4 +70,28 @@ public class TransactionAppService(ITransactionRepository txRepo)
 
     public Task<decimal> GetBillTotalAsync(int locationID, string receipt, int unitNo, int decimalPoints) =>
         txRepo.GetBillTotalAsync(locationID, receipt, unitNo, decimalPoints);
+
+    public Task<string> GetItemCommentAsync(int locationID, int locationIDBilling, int tableID, long ticketID, long rowNo, long productID) =>
+        txRepo.GetItemCommentAsync(locationID, locationIDBilling, tableID, ticketID, rowNo, productID);
+
+    public Task<bool> UpdateItemCommentAsync(ItemCommentRequest req) =>
+        txRepo.UpdateItemCommentAsync(req);
+
+    public Task<bool> UpdateTagNoAsync(TagRequest req) =>
+        txRepo.UpdateTagNoAsync(req);
+
+    public Task<bool> UpdatePacksAsync(PacksRequest req) =>
+        txRepo.UpdatePacksAsync(req);
+
+    public Task<bool> UpdateMobileNoAsync(MobileNoRequest req) =>
+        txRepo.UpdateMobileNoAsync(req);
+
+    public Task<bool> MoveItemsAsync(MoveItemsRequest req) =>
+        txRepo.MoveItemsAsync(req);
+
+    public Task<bool> MergeTableAsync(MergeTableRequest req) =>
+        txRepo.MergeTableAsync(req);
+
+    public Task<bool> ShiftEndAsync(ShiftEndRequest req) =>
+        txRepo.ShiftEndAsync(req);
 }

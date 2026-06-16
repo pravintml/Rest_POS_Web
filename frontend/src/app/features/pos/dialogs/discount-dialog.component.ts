@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -80,16 +80,23 @@ export interface DiscountResult {
     :host ::ng-deep .disc-type-btn .p-button { flex: 1; }
   `]
 })
-export class DiscountDialogComponent {
+export class DiscountDialogComponent implements OnChanges {
   @Input() visible = false;
   @Input() line: OrderLineDto | null = null;
   @Input() isSubTotal = false;
+  @Input() initialLevel = 1;
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() applied = new EventEmitter<DiscountResult>();
 
   isPercentage = true;
   discountValue: number | null = null;
   discountID = 1;
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['visible']?.currentValue === true) {
+      this.discountID = this.initialLevel > 0 ? this.initialLevel : 1;
+    }
+  }
 
   typeOpts = [
     { label: 'Percentage %', value: true },

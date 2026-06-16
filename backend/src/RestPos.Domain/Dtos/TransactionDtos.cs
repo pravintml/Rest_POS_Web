@@ -151,6 +151,70 @@ public record DiscountRemoveRequest(
     long RowNo
 );
 
+public record ItemCommentRequest(
+    int LocationID,
+    int LocationIDBilling,
+    int TableID,
+    long TicketID,
+    long RowNo,
+    long ProductID,
+    string ItemComment
+);
+
+public record TagRequest(
+    int LocationID,
+    int LocationIDBilling,
+    int TableID,
+    long TicketID,
+    string TagNo
+);
+
+public record PacksRequest(
+    int LocationID,
+    int LocationIDBilling,
+    int TableID,
+    long TicketID,
+    int Packs
+);
+
+public record MobileNoRequest(
+    int LocationID,
+    int LocationIDBilling,
+    int TableID,
+    long TicketID,
+    string MobileNo
+);
+
+public record MoveItemsRequest(
+    int LocationID,
+    long CashierID,
+    int LocationIDBilling,
+    int TableID,
+    long TicketID,
+    long RowNo,
+    long NewTicketID
+);
+
+public record MergeTableRequest(
+    int LocationID,
+    long CashierID,
+    int LocationIDBilling,
+    int TableID,
+    long TicketID,
+    int TableIDToBeMerged,
+    int LocationIDBillingToBeMerged,
+    long TicketIDToBeMerged
+);
+
+public record ShiftEndRequest(
+    int LocationID,
+    long CashierID,
+    int LocationIDBilling,
+    decimal Amount,
+    DateTime DayEnd,
+    int UnitNo
+);
+
 public record SuspendRequest(
     int LocationID,
     string Receipt,

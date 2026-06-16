@@ -163,5 +163,71 @@ public class TransactionController(TransactionAppService txSvc) : ControllerBase
         return ok ? Ok() : BadRequest(new { error = "Failed to save status" });
     }
 
+    // ── GET: item comment ────────────────────────────────────────────────
+    [HttpGet("item-comment")]
+    public async Task<IActionResult> GetItemComment(
+        [FromQuery] int locationIDBilling, [FromQuery] int tableID,
+        [FromQuery] long ticketID, [FromQuery] long rowNo, [FromQuery] long productID)
+    {
+        var comment = await txSvc.GetItemCommentAsync(LocationId, locationIDBilling, tableID, ticketID, rowNo, productID);
+        return Ok(new { comment });
+    }
+
+    // ── PUT: item comment ────────────────────────────────────────────────
+    [HttpPut("item-comment")]
+    public async Task<IActionResult> UpdateItemComment([FromBody] ItemCommentRequest req)
+    {
+        var ok = await txSvc.UpdateItemCommentAsync(req with { LocationID = LocationId });
+        return ok ? Ok() : BadRequest(new { error = "Failed to update comment" });
+    }
+
+    // ── POST: tag no ─────────────────────────────────────────────────────
+    [HttpPost("tag")]
+    public async Task<IActionResult> UpdateTag([FromBody] TagRequest req)
+    {
+        var ok = await txSvc.UpdateTagNoAsync(req with { LocationID = LocationId });
+        return ok ? Ok() : BadRequest(new { error = "Failed to update tag" });
+    }
+
+    // ── POST: packs ──────────────────────────────────────────────────────
+    [HttpPost("packs")]
+    public async Task<IActionResult> UpdatePacks([FromBody] PacksRequest req)
+    {
+        var ok = await txSvc.UpdatePacksAsync(req with { LocationID = LocationId });
+        return ok ? Ok() : BadRequest(new { error = "Failed to update packs" });
+    }
+
+    // ── POST: mobile no ──────────────────────────────────────────────────
+    [HttpPost("mobile-no")]
+    public async Task<IActionResult> UpdateMobileNo([FromBody] MobileNoRequest req)
+    {
+        var ok = await txSvc.UpdateMobileNoAsync(req with { LocationID = LocationId });
+        return ok ? Ok() : BadRequest(new { error = "Failed to update mobile no" });
+    }
+
+    // ── POST: move items to new ticket ───────────────────────────────────
+    [HttpPost("move-items")]
+    public async Task<IActionResult> MoveItems([FromBody] MoveItemsRequest req)
+    {
+        var ok = await txSvc.MoveItemsAsync(req with { LocationID = LocationId, CashierID = CashierId });
+        return ok ? Ok() : BadRequest(new { error = "Failed to move item" });
+    }
+
+    // ── POST: merge table into current ticket ────────────────────────────
+    [HttpPost("merge-table")]
+    public async Task<IActionResult> MergeTable([FromBody] MergeTableRequest req)
+    {
+        var ok = await txSvc.MergeTableAsync(req with { LocationID = LocationId, CashierID = CashierId });
+        return ok ? Ok() : BadRequest(new { error = "Failed to merge table" });
+    }
+
+    // ── POST: shift end ──────────────────────────────────────────────────
+    [HttpPost("shift-end")]
+    public async Task<IActionResult> ShiftEnd([FromBody] ShiftEndRequest req)
+    {
+        var ok = await txSvc.ShiftEndAsync(req with { LocationID = LocationId, CashierID = CashierId, UnitNo = UnitNo });
+        return ok ? Ok() : BadRequest(new { error = "Failed to end shift" });
+    }
+
     public record SaveStatusRequest(string Receipt, int TransStatus, string DocNo = "");
 }

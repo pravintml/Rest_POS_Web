@@ -5,7 +5,9 @@ import {
   AddItemRequest, BillSummaryDto, DiscountRequest,
   VoidItemRequest, ErrorCorrectRequest, VoidBillRequest,
   ChangePriceRequest, SaveInvoiceRequest, CancelInvoiceRequest, SendKotRequest,
-  DecreaseQtyRequest, SplitQtyRequest, DiscountRemoveRequest
+  DecreaseQtyRequest, SplitQtyRequest, DiscountRemoveRequest,
+  ItemCommentRequest, TagRequest, PacksRequest, MobileNoRequest,
+  MoveItemsRequest, MergeTableRequest, ShiftEndRequest
 } from '../models/transaction.models';
 
 const BASE = `${environment.apiUrl}/api/transaction`;
@@ -87,5 +89,43 @@ export class TransactionService {
 
   saveStatus(receipt: string, transStatus: number, docNo = '') {
     return this.http.post<void>(`${BASE}/save-status`, { receipt, transStatus, docNo });
+  }
+
+  getItemComment(locationIDBilling: number, tableID: number, ticketID: number, rowNo: number, productID: number) {
+    const params = new HttpParams()
+      .set('locationIDBilling', locationIDBilling)
+      .set('tableID', tableID)
+      .set('ticketID', ticketID)
+      .set('rowNo', rowNo)
+      .set('productID', productID);
+    return this.http.get<{ comment: string }>(`${BASE}/item-comment`, { params });
+  }
+
+  updateItemComment(req: ItemCommentRequest) {
+    return this.http.put<void>(`${BASE}/item-comment`, req);
+  }
+
+  updateTag(req: TagRequest) {
+    return this.http.post<void>(`${BASE}/tag`, req);
+  }
+
+  updatePacks(req: PacksRequest) {
+    return this.http.post<void>(`${BASE}/packs`, req);
+  }
+
+  updateMobileNo(req: MobileNoRequest) {
+    return this.http.post<void>(`${BASE}/mobile-no`, req);
+  }
+
+  moveItems(req: MoveItemsRequest) {
+    return this.http.post<void>(`${BASE}/move-items`, req);
+  }
+
+  mergeTable(req: MergeTableRequest) {
+    return this.http.post<void>(`${BASE}/merge-table`, req);
+  }
+
+  shiftEnd(req: ShiftEndRequest) {
+    return this.http.post<void>(`${BASE}/shift-end`, req);
   }
 }

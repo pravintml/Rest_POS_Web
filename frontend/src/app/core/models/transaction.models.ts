@@ -213,3 +213,67 @@ export interface DiscountRemoveRequest {
   ticketID: number;
   rowNo: number;
 }
+
+export interface ItemCommentRequest {
+  locationID: number;
+  locationIDBilling: number;
+  tableID: number;
+  ticketID: number;
+  rowNo: number;
+  productID: number;
+  itemComment: string;
+}
+
+export interface TagRequest {
+  locationID: number;
+  locationIDBilling: number;
+  tableID: number;
+  ticketID: number;
+  tagNo: string;
+}
+
+export interface PacksRequest {
+  locationID: number;
+  locationIDBilling: number;
+  tableID: number;
+  ticketID: number;
+  packs: number;
+}
+
+export interface MobileNoRequest {
+  locationID: number;
+  locationIDBilling: number;
+  tableID: number;
+  ticketID: number;
+  mobileNo: string;
+}
+
+export interface MoveItemsRequest {
+  locationID: number;
+  cashierID: number;
+  locationIDBilling: number;
+  tableID: number;
+  ticketID: number;
+  rowNo: number;
+  newTicketID: number;
+}
+
+export interface MergeTableRequest {
+  locationID: number;
+  cashierID: number;
+  locationIDBilling: number;
+  tableID: number;
+  ticketID: number;
+  tableIDToBeMerged: number;
+  locationIDBillingToBeMerged: number;
+  ticketIDToBeMerged: number;
+}
+
+export interface ShiftEndRequest {
+  locationID: number;
+  cashierID: number;
+  locationIDBilling: number;
+  amount: number;
+  dayEnd: string;
+  unitNo: number;
+}

@@ -24,7 +24,7 @@ import { MasterService } from '../../core/services/master.service';
 
 import { SysConfig } from '../../core/models/config.models';
 import { ProductMaster } from '../../core/models/product.models';
-import { OrderLineDto } from '../../core/models/transaction.models';
+import { OrderLineDto, ItemCommentRequest } from '../../core/models/transaction.models';
 import { PayTypeDto, PaymentLineDto, SuspendListItem, AddPaymentRequest } from '../../core/models/payment.models';
 import {
   BillingLocation, TableInfo, Steward, TicketInfo
@@ -35,6 +35,7 @@ import { PaymentDialogComponent, PaymentDialogContext } from './dialogs/payment-
 import { SuspendDialogComponent, SuspendDialogMode } from './dialogs/suspend-dialog.component';
 import { ReceiptComponent, ReceiptData } from './receipt/receipt.component';
 import { ProductBrowserComponent } from './browser/product-browser.component';
+import { MenuReportDialogComponent } from './dialogs/menu-report-dialog.component';
 
 type SelectionStage = 'location' | 'tables' | 'tickets' | 'steward' | 'pos';
 
@@ -48,7 +49,7 @@ type SelectionStage = 'location' | 'tables' | 'tickets' | 'steward' | 'pos';
     ConfirmDialogModule,
     DiscountDialogComponent, PaymentDialogComponent,
     SuspendDialogComponent, ReceiptComponent,
-    ProductBrowserComponent
+    ProductBrowserComponent, MenuReportDialogComponent
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './pos.component.html',
@@ -127,6 +128,24 @@ export class PosComponent implements OnInit, OnDestroy {
 
   // ── More panel toggle ─────────────────────────────────────────────────────
   showMore = signal(false);
+
+  // ── Menu / reports dialog ─────────────────────────────────────────────────
+  showMenuDialog = signal(false);
+  openMenu() { this.showMenuDialog.set(true); }
+
+  // ── Discount level (1-5 = line discount tier, 0 = default) ───────────────
+  discountLevelId = signal(0);
+  readonly discountLevelLabel = computed(() => {
+    const lvl = this.discountLevelId();
+    return lvl === 0 ? 'DISCOUNT LEVEL' : `DISC LVL ${lvl}`;
+  });
+
+  // ── Merge table overlay ────────────────────────────────────────────────────
+  showMergeOverlay = signal(false);
+  mergeStage = signal<'tables' | 'tickets'>('tables');
+  mergeTables = signal<import('../../core/models/master.models').TableInfo[]>([]);
+  mergeSourceTickets = signal<import('../../core/models/master.models').TicketInfo[]>([]);
+  mergeSelectedTable = signal<import('../../core/models/master.models').TableInfo | null>(null);
 
   payTypes = signal<PayTypeDto[]>([]);
   paymentLines = signal<PaymentLineDto[]>([]);
@@ -927,6 +946,242 @@ export class PosComponent implements OnInit, OnDestroy {
     this.stewardName.set('');
     this.selectedRowNo.set(null);
     this.selectionStage.set('tables');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // COMMENT — get existing comment, prompt user, save
+  // ─────────────────────────────────────────────────────────────────────────
+  openComment() {
+    const line = this.selectedLine();
+    if (!line) { this.toast('warn', 'Select Item', 'Please select an item first'); return; }
+    const sess = this.session()!;
+    this.txSvc.getItemComment(
+      this.locationIDBilling(), this.tableID(), this.ticketID(),
+      line.rowNo, line.productID
+    ).subscribe({
+      next: res => {
+        const text = window.prompt('Item comment:', res.comment);
+        if (text === null) return;
+        this.busy.set(true);
+        this.txSvc.updateItemComment({
+          locationID: sess.locationId,
+          locationIDBilling: this.locationIDBilling(),
+          tableID: this.tableID(),
+          ticketID: this.ticketID(),
+          rowNo: line.rowNo,
+          productID: line.productID,
+          itemComment: text
+        }).subscribe({
+          next: () => { this.busy.set(false); this.loadBill(); this.toast('success', 'Comment', 'Saved'); },
+          error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to save comment'); }
+        });
+      },
+      error: () => this.toast('error', 'Error', 'Could not load comment')
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // TAG — use numpad value or prompt
+  // ─────────────────────────────────────────────────────────────────────────
+  updateTag() {
+    const buf = this.numpadBuffer().trim();
+    const tagNo = (buf || window.prompt('Tag No:', '')) ?? '';
+    if (!tagNo) return;
+    const sess = this.session()!;
+    this.busy.set(true);
+    this.txSvc.updateTag({
+      locationID: sess.locationId,
+      locationIDBilling: this.locationIDBilling(),
+      tableID: this.tableID(),
+      ticketID: this.ticketID(),
+      tagNo
+    }).subscribe({
+      next: () => { this.busy.set(false); this.numpadClear(); this.loadBill(); this.toast('success', 'Tag', tagNo); },
+      error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to set tag'); }
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PACKS — use numpad value
+  // ─────────────────────────────────────────────────────────────────────────
+  updatePacks() {
+    const packs = parseInt(this.numpadBuffer(), 10);
+    if (!packs || packs <= 0) { this.toast('warn', 'Packs', 'Enter number of packs on numpad first'); return; }
+    const sess = this.session()!;
+    this.busy.set(true);
+    this.txSvc.updatePacks({
+      locationID: sess.locationId,
+      locationIDBilling: this.locationIDBilling(),
+      tableID: this.tableID(),
+      ticketID: this.ticketID(),
+      packs
+    }).subscribe({
+      next: () => { this.busy.set(false); this.numpadClear(); this.loadBill(); this.toast('success', 'Packs', `${packs} packs`); },
+      error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to set packs'); }
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // MOBILE NO — use numpad value or prompt
+  // ─────────────────────────────────────────────────────────────────────────
+  updateMobileNo() {
+    const buf = this.numpadBuffer().trim();
+    const mobileNo = (buf || window.prompt('Mobile No:', '')) ?? '';
+    if (!mobileNo) return;
+    const sess = this.session()!;
+    this.busy.set(true);
+    this.txSvc.updateMobileNo({
+      locationID: sess.locationId,
+      locationIDBilling: this.locationIDBilling(),
+      tableID: this.tableID(),
+      ticketID: this.ticketID(),
+      mobileNo
+    }).subscribe({
+      next: () => { this.busy.set(false); this.numpadClear(); this.loadBill(); this.toast('success', 'Mobile No', mobileNo); },
+      error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to set mobile no'); }
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DISCOUNT LEVEL — cycles 0→1→2→3→4→5→0
+  // ─────────────────────────────────────────────────────────────────────────
+  cycleDiscountLevel() {
+    this.discountLevelId.update(lvl => (lvl >= 5 ? 0 : lvl + 1));
+    const lvl = this.discountLevelId();
+    this.toast('info', 'Discount Level', lvl === 0 ? 'Reset to default' : `Level ${lvl} active`, 1500);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // MOVE — moves selected item to a new ticket on the same table
+  // ─────────────────────────────────────────────────────────────────────────
+  moveSelectedItem() {
+    const line = this.selectedLine();
+    if (!line) { this.toast('warn', 'Select Item', 'Please select an item to move'); return; }
+    const sess = this.session()!;
+
+    this.confirmSvc.confirm({
+      message: `Move "${line.descrip}" to a new ticket on this table?`,
+      accept: () => {
+        this.busy.set(true);
+        this.masterSvc.allocateTicket().subscribe({
+          next: res => {
+            this.txSvc.moveItems({
+              locationID: sess.locationId,
+              cashierID: sess.cashierId,
+              locationIDBilling: this.locationIDBilling(),
+              tableID: this.tableID(),
+              ticketID: this.ticketID(),
+              rowNo: line.rowNo,
+              newTicketID: res.ticketId
+            }).subscribe({
+              next: () => {
+                this.busy.set(false);
+                this.selectedRowNo.set(null);
+                this.loadBill();
+                this.toast('success', 'Moved', `"${line.descrip}" moved to new ticket #${res.ticketId}`);
+              },
+              error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to move item'); }
+            });
+          },
+          error: () => { this.busy.set(false); this.toast('error', 'Error', 'Could not allocate ticket'); }
+        });
+      }
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // MERGE — merge another ticket's items into the current one
+  // ─────────────────────────────────────────────────────────────────────────
+  openMerge() {
+    this.selectionLoading.set(true);
+    this.masterSvc.getTables(this.locationIDBilling()).subscribe({
+      next: list => {
+        this.selectionLoading.set(false);
+        this.mergeTables.set(list);
+        this.mergeStage.set('tables');
+        this.showMergeOverlay.set(true);
+      },
+      error: () => { this.selectionLoading.set(false); this.toast('error', 'Error', 'Could not load tables'); }
+    });
+  }
+
+  onMergeTableSelected(table: import('../../core/models/master.models').TableInfo) {
+    this.mergeSelectedTable.set(table);
+    this.selectionLoading.set(true);
+    this.masterSvc.getTickets(this.locationIDBilling(), table.tableID).subscribe({
+      next: tickets => {
+        this.selectionLoading.set(false);
+        // Exclude the current ticket
+        const filtered = tickets.filter(t => t.ticketID !== this.ticketID() || table.tableID !== this.tableID());
+        if (filtered.length === 0) { this.toast('warn', 'No Tickets', 'No other open tickets on this table'); return; }
+        this.mergeSourceTickets.set(filtered);
+        this.mergeStage.set('tickets');
+      },
+      error: () => { this.selectionLoading.set(false); this.toast('error', 'Error', 'Could not load tickets'); }
+    });
+  }
+
+  onMergeTicketSelected(ticket: import('../../core/models/master.models').TicketInfo) {
+    const src = this.mergeSelectedTable()!;
+    const sess = this.session()!;
+    this.showMergeOverlay.set(false);
+
+    this.confirmSvc.confirm({
+      message: `Merge ticket #${ticket.ticketID} from ${src.tableName} into the current bill?`,
+      accept: () => {
+        this.busy.set(true);
+        this.txSvc.mergeTable({
+          locationID: sess.locationId,
+          cashierID: sess.cashierId,
+          locationIDBilling: this.locationIDBilling(),
+          tableID: this.tableID(),
+          ticketID: this.ticketID(),
+          tableIDToBeMerged: src.tableID,
+          locationIDBillingToBeMerged: this.locationIDBilling(),
+          ticketIDToBeMerged: ticket.ticketID
+        }).subscribe({
+          next: () => { this.busy.set(false); this.loadBill(); this.toast('success', 'Merged', `Ticket #${ticket.ticketID} merged in`); },
+          error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to merge table'); }
+        });
+      }
+    });
+  }
+
+  closeMergeOverlay() { this.showMergeOverlay.set(false); }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // SHIFT END — enter cash-in-hand amount, confirm, call SP
+  // ─────────────────────────────────────────────────────────────────────────
+  shiftEnd() {
+    const buf = this.numpadBuffer().trim();
+    const amount = buf ? parseFloat(buf) : null;
+    if (amount === null || isNaN(amount)) {
+      this.toast('warn', 'Shift End', 'Enter cash-in-hand amount on numpad first');
+      return;
+    }
+    const sess = this.session()!;
+    this.confirmSvc.confirm({
+      message: `End shift? Cash in hand: ${amount.toFixed(this.decimalPlaces())}`,
+      accept: () => {
+        this.busy.set(true);
+        this.txSvc.shiftEnd({
+          locationID: sess.locationId,
+          cashierID: sess.cashierId,
+          locationIDBilling: this.locationIDBilling(),
+          amount,
+          dayEnd: new Date().toISOString(),
+          unitNo: sess.unitNo
+        }).subscribe({
+          next: () => {
+            this.busy.set(false);
+            this.numpadClear();
+            this.showMore.set(false);
+            this.toast('success', 'Shift End', 'Shift closed successfully');
+          },
+          error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to end shift'); }
+        });
+      }
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────

@@ -120,6 +120,7 @@ $header-h: 52px;
   flex: 1;
   overflow: hidden;
   gap: 0;
+  position: relative;
 }
 
 // ── Action Panel (Far Left) ────────────────────────
@@ -334,6 +335,7 @@ $header-h: 52px;
   &.less-btn  { grid-column: 1 / -1; background: rgba(255,255,255,0.07); color: $text;
                border-color: rgba(255,255,255,0.15);
                &:hover { background: rgba(255,255,255,0.12); } }
+  &.active-level { background: rgba(99,102,241,0.2); color: #a5b4fc; border-color: rgba(99,102,241,0.4); }
 }
 
 // ── Order bottom buttons (PAYMENT / COPY / LAYAWAY) ──
@@ -689,6 +691,100 @@ $header-h: 52px;
 .otu-badge { color: #74b9ff; }
 
 // ── Receipt print overlay ──────────────────────────
+// ── Merge table overlay ────────────────────────────────────────────────────
+.merge-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.merge-panel {
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: 10px;
+  width: min(480px, 90vw);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.merge-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid $border;
+  font-weight: 600;
+  font-size: 0.95rem;
+  i { color: $accent; margin-right: 0.4rem; }
+}
+.merge-close {
+  background: none;
+  border: none;
+  color: $text-muted;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  &:hover { background: rgba(255,255,255,0.08); color: $text; }
+}
+.merge-loading { display: flex; justify-content: center; padding: 2rem; }
+.merge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 0.5rem;
+  padding: 0.75rem;
+  overflow-y: auto;
+}
+.merge-tickets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  overflow-y: auto;
+}
+.merge-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid $border;
+  color: $text;
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-align: left;
+  transition: background 0.15s;
+  &:hover { background: rgba(255,255,255,0.12); border-color: $accent; }
+}
+.merge-ticket-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  .merge-tkt-amount { color: $accent; font-weight: 600; }
+  .merge-tkt-steward { color: $text-muted; font-size: 0.8rem; }
+}
+.merge-back {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid $border;
+}
+.merge-back-btn {
+  background: none;
+  border: 1px solid $border;
+  color: $text-muted;
+  border-radius: 5px;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  &:hover { color: $text; background: rgba(255,255,255,0.06); }
+}
+
+// ── Receipt overlay ────────────────────────────────────────────────────────
 .receipt-overlay {
   position: fixed;
   inset: 0;

@@ -1,4 +1,5 @@
 using Dapper;
+using Microsoft.Data.SqlClient;
 using RestPos.Domain;
 using RestPos.Domain.Dtos;
 using System.Data;
@@ -26,6 +27,16 @@ public interface ITransactionRepository
     Task<BillSummaryDto> GetBillSummaryAsync(int locationID, int locationIDBilling, int tableID, long ticketID, int unitNo, string receipt, int documentID, int decimalPoints);
     Task<decimal> GetBillTotalAsync(int locationID, string receipt, int unitNo, int decimalPoints);
     Task<long> GetMaxRowNoAsync(int locationID, int unitNo, string receipt);
+
+    Task<string> GetItemCommentAsync(int locationID, int locationIDBilling, int tableID, long ticketID, long rowNo, long productID);
+    Task<bool> UpdateItemCommentAsync(ItemCommentRequest req);
+    Task<bool> UpdateTagNoAsync(TagRequest req);
+    Task<bool> UpdatePacksAsync(PacksRequest req);
+    Task<bool> UpdateMobileNoAsync(MobileNoRequest req);
+
+    Task<bool> MoveItemsAsync(MoveItemsRequest req);
+    Task<bool> MergeTableAsync(MergeTableRequest req);
+    Task<bool> ShiftEndAsync(ShiftEndRequest req);
 }
 
 public class TransactionRepository(IDbConnectionFactory db) : ITransactionRepository
@@ -351,5 +362,127 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
         conn.Open();
         const string sql = "SELECT ISNULL(MAX(RowNo),0) FROM TempItemDet WHERE LocationID=@LocationID AND UnitNo=@UnitNo AND Receipt=@Receipt";
         return await conn.ExecuteScalarAsync<long>(sql, new { LocationID = locationID, UnitNo = unitNo, Receipt = receipt });
+    }
+
+    public async Task<string> GetItemCommentAsync(int locationID, int locationIDBilling, int tableID, long ticketID, long rowNo, long productID)
+    {
+        using var conn = db.Create();
+        conn.Open();
+        const string sql = @"
+            SELECT ISNULL(ItemComment,'')
+            FROM TempItemDet
+            WHERE LocationID=@LocationID AND LocationIDBilling=@LocationIDBilling
+              AND TableID=@TableID AND TicketID=@TicketID
+              AND RowNo=@RowNo AND ProductID=@ProductID";
+        return await conn.ExecuteScalarAsync<string>(sql, new
+        {
+            LocationID = locationID, LocationIDBilling = locationIDBilling,
+            TableID = tableID, TicketID = ticketID, RowNo = rowNo, ProductID = productID
+        }) ?? string.Empty;
+    }
+
+    public async Task<bool> UpdateItemCommentAsync(ItemCommentRequest r)
+    {
+        using var conn = db.Create();
+        conn.Open();
+        const string sql = @"
+            UPDATE TempItemDet SET ItemComment=@ItemComment
+            WHERE LocationID=@LocationID AND LocationIDBilling=@LocationIDBilling
+              AND TableID=@TableID AND TicketID=@TicketID
+              AND RowNo=@RowNo AND ProductID=@ProductID";
+        var rows = await conn.ExecuteAsync(sql, new
+        {
+            r.LocationID, r.LocationIDBilling, r.TableID, r.TicketID,
+            r.RowNo, r.ProductID, r.ItemComment
+        });
+        return rows >= 0;
+    }
+
+    public async Task<bool> UpdateTagNoAsync(TagRequest r)
+    {
+        using var conn = db.Create();
+        conn.Open();
+        const string sql = @"
+            UPDATE TempItemDet SET TagNo=@TagNo
+            WHERE LocationID=@LocationID AND LocationIDBilling=@LocationIDBilling
+              AND TableID=@TableID AND TicketID=@TicketID";
+        var rows = await conn.ExecuteAsync(sql, new
+        {
+            r.LocationID, r.LocationIDBilling, r.TableID, r.TicketID, r.TagNo
+        });
+        return rows >= 0;
+    }
+
+    public async Task<bool> UpdatePacksAsync(PacksRequest r)
+    {
+        using var conn = db.Create();
+        conn.Open();
+        const string sql = @"
+            UPDATE TempItemDet SET Packs=@Packs
+            WHERE LocationID=@LocationID AND LocationIDBilling=@LocationIDBilling
+              AND TableID=@TableID AND TicketID=@TicketID
+              AND DocumentID IN (1) AND BillTypeID!=4";
+        var rows = await conn.ExecuteAsync(sql, new
+        {
+            r.LocationID, r.LocationIDBilling, r.TableID, r.TicketID, r.Packs
+        });
+        return rows >= 0;
+    }
+
+    public async Task<bool> UpdateMobileNoAsync(MobileNoRequest r)
+    {
+        using var conn = db.Create();
+        conn.Open();
+        const string sql = @"
+            UPDATE TempItemDet SET MobileNo=@MobileNo
+            WHERE LocationID=@LocationID AND LocationIDBilling=@LocationIDBilling
+              AND TableID=@TableID AND TicketID=@TicketID";
+        var rows = await conn.ExecuteAsync(sql, new
+        {
+            r.LocationID, r.LocationIDBilling, r.TableID, r.TicketID, r.MobileNo
+        });
+        return rows >= 0;
+    }
+
+    public async Task<bool> MoveItemsAsync(MoveItemsRequest r)
+    {
+        using var conn = (SqlConnection)db.Create();
+        conn.Open();
+        var dt = new DataTable();
+        dt.Columns.Add("RowNo", typeof(int));
+        dt.Rows.Add((int)r.RowNo);
+        // SP returns null on success (no SELECT) or error message string on failure
+        var result = await conn.QueryFirstOrDefaultAsync<string>("spMoveItems", new
+        {
+            r.LocationID, r.CashierID, r.LocationIDBilling, r.TableID, r.TicketID,
+            RowList = dt.AsTableValuedParameter("dbo.RowList"),
+            r.NewTicketID
+        }, commandType: CommandType.StoredProcedure);
+        return result == null;
+    }
+
+    public async Task<bool> MergeTableAsync(MergeTableRequest r)
+    {
+        using var conn = db.Create();
+        conn.Open();
+        var result = await conn.QueryFirstOrDefaultAsync<string>("spMergeTable", new
+        {
+            r.LocationID, r.CashierID, r.LocationIDBilling,
+            r.TableID, r.TicketID,
+            r.TableIDToBeMerged, r.LocationIDBillingToBeMerged, r.TicketIDToBeMerged
+        }, commandType: CommandType.StoredProcedure);
+        return result == "0";
+    }
+
+    public async Task<bool> ShiftEndAsync(ShiftEndRequest r)
+    {
+        using var conn = db.Create();
+        conn.Open();
+        var result = await conn.QueryFirstOrDefaultAsync<string>("spShiftEnd", new
+        {
+            r.LocationID, r.CashierID, r.LocationIDBilling,
+            r.Amount, DayEnd = r.DayEnd, r.UnitNo
+        }, commandType: CommandType.StoredProcedure);
+        return result == "0";
     }
 }
