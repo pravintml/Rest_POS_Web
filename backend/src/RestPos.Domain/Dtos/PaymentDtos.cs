@@ -41,8 +41,12 @@ public record PaymentLineDto(
 public record PayTypeDto(
     int PayTypeID,
     string PayTypeName,
-    bool IsActive
+    bool IsActive,
+    int Type,       // 0=Cash, 1=Card(needs RefNo), 6=Other
+    bool IsSwipe    // card must be swiped (not manually entered)
 );
+
+public record PaymentNoteDto(int Note);
 
 public record ClearPaymentRequest(
     int LocationID,

@@ -2,6 +2,12 @@ export interface PayTypeDto {
   payTypeID: number;
   payTypeName: string;
   isActive: boolean;
+  type: number;     // 0=Cash, 1=Card(needs RefNo), 6=Other
+  isSwipe: boolean;
+}
+
+export interface PaymentNoteDto {
+  note: number;
 }
 
 export interface PaymentLineDto {

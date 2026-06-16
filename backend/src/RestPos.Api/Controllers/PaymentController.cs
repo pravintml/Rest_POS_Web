@@ -25,6 +25,14 @@ public class PaymentController(PaymentAppService paySvc, SuspendAppService suspe
         return Ok(types);
     }
 
+    // ── GET: denomination notes ──────────────────────────────────────────
+    [HttpGet("notes")]
+    public async Task<IActionResult> GetPaymentNotes()
+    {
+        var notes = await paySvc.GetPaymentNotesAsync();
+        return Ok(notes);
+    }
+
     // ── GET: payment summary (total paid, change, lines) ─────────────────
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary(

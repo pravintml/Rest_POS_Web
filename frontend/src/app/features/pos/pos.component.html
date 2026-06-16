@@ -375,9 +375,9 @@
   [(visible)]="showPayment"
   [ctx]="paymentCtx()"
   [payTypeList]="payTypes()"
-  (tenderAdded)="onTenderAdded($event)"
-  (tenderCleared)="onTenderCleared()"
-  (completed)="onPaymentCompleted()" />
+  [notesList]="paymentNotes()"
+  [orderItems]="orderItems()"
+  (completed)="onPaymentCompleted($event)" />
 
 <app-suspend-dialog
   [(visible)]="showSuspend"

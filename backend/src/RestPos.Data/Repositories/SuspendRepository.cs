@@ -36,12 +36,12 @@ public class SuspendRepository(IDbConnectionFactory db) : ISuspendRepository
     {
         using var conn = db.Create();
         conn.Open();
-        var rows = await conn.ExecuteAsync("spRecallSuspendedInvoice", new
+        await conn.ExecuteAsync("spRecallSuspendedInvoice", new
         {
             r.LocationID, r.Receipt, r.UnitNo, r.CashierID,
             r.RecallNo, RecallCashier = r.Cashier, r.RecallUnitNo
         }, commandType: CommandType.StoredProcedure);
-        return rows >= 0;
+        return true;
     }
 
     public async Task<SuspendHed?> GetSuspendHedAsync(int locationID, string recallNo, int recallUnitNo)

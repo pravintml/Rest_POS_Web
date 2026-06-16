@@ -25,7 +25,7 @@ import { MasterService } from '../../core/services/master.service';
 import { SysConfig } from '../../core/models/config.models';
 import { ProductMaster } from '../../core/models/product.models';
 import { OrderLineDto, ItemCommentRequest } from '../../core/models/transaction.models';
-import { PayTypeDto, PaymentLineDto, SuspendListItem, AddPaymentRequest } from '../../core/models/payment.models';
+import { PayTypeDto, PaymentLineDto, SuspendListItem } from '../../core/models/payment.models';
 import {
   BillingLocation, TableInfo, Steward, TicketInfo
 } from '../../core/models/master.models';
@@ -148,6 +148,7 @@ export class PosComponent implements OnInit, OnDestroy {
   mergeSelectedTable = signal<import('../../core/models/master.models').TableInfo | null>(null);
 
   payTypes = signal<PayTypeDto[]>([]);
+  paymentNotes = signal<number[]>([]);
   paymentLines = signal<PaymentLineDto[]>([]);
   suspendList = signal<SuspendListItem[]>([]);
   paymentCtx = signal<PaymentDialogContext | null>(null);
@@ -814,6 +815,10 @@ export class PosComponent implements OnInit, OnDestroy {
       next: types => this.payTypes.set(types),
       error: () => {}
     });
+    this.paySvc.getPaymentNotes().subscribe({
+      next: notes => this.paymentNotes.set(notes.map(n => n.note)),
+      error: () => {}
+    });
   }
 
   openPayment() {
@@ -830,43 +835,16 @@ export class PosComponent implements OnInit, OnDestroy {
       billTypeID: 1,
       saleTypeID: 1,
       billTotal: this.billTotal(),
-      decimalPoints: this.decimalPlaces()
+      decimalPoints: this.decimalPlaces(),
+      tableName: this.tableName(),
+      cashierName: sess.name
     });
     this.paymentLines.set([]);
     this.showPayment = true;
   }
 
-  onTenderAdded(req: AddPaymentRequest) {
-    this.paySvc.addPayment(req).subscribe({
-      next: () => {
-        const ctx = this.paymentCtx()!;
-        this.paySvc.getPaymentSummary(
-          ctx.locationIDBilling, ctx.tableID, ctx.ticketID,
-          ctx.receipt, ctx.billTotal
-        ).subscribe({
-          next: summary => this.paymentLines.set(summary.lines),
-          error: () => {}
-        });
-        this.toast('success', 'Tender', `${req.descrip}: ${req.amount.toFixed(2)}`, 1200);
-      },
-      error: () => this.toast('error', 'Error', 'Failed to add payment')
-    });
-  }
-
-  onTenderCleared() {
-    const ctx = this.paymentCtx()!;
-    this.paySvc.clearPayment({
-      locationID: ctx.locationID,
-      locationIDBilling: ctx.locationIDBilling,
-      tableID: ctx.tableID,
-      ticketID: ctx.ticketID
-    }).subscribe({
-      next: () => this.paymentLines.set([]),
-      error: () => {}
-    });
-  }
-
-  onPaymentCompleted() {
+  onPaymentCompleted(lines: PaymentLineDto[]) {
+    this.paymentLines.set(lines);
     const sess = this.session()!;
     const cfg = this.config()!;
 

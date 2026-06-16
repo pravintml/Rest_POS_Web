@@ -11,6 +11,7 @@ public interface IPaymentRepository
     Task<decimal> GetPaidTotalAsync(int locationID, string receipt, int unitNo, int? payTypeID = null);
     Task<IEnumerable<PaymentLineDto>> GetPaymentLinesAsync(int locationID, int locationIDBilling, int tableID, long ticketID);
     Task<IEnumerable<PayTypeDto>> GetPayTypesAsync(int locationID);
+    Task<IEnumerable<PaymentNoteDto>> GetPaymentNotesAsync();
 }
 
 public class PaymentRepository(IDbConnectionFactory db) : IPaymentRepository
@@ -19,7 +20,7 @@ public class PaymentRepository(IDbConnectionFactory db) : IPaymentRepository
     {
         using var conn = db.Create();
         conn.Open();
-        var rows = await conn.ExecuteAsync("spTempPaymentUpdate", new
+        await conn.ExecuteAsync("spTempPaymentUpdate", new
         {
             r.LocationID, r.Receipt, r.UnitNo,
             r.BillTypeID, r.SaleTypeID, r.CashierID, r.PayTypeID,
@@ -28,18 +29,18 @@ public class PaymentRepository(IDbConnectionFactory db) : IPaymentRepository
             r.IsRecallAdv, r.RecallNo, r.Descrip, EnCodeName = r.EnCodeName,
             r.LocationIDBilling, r.TableID, r.TicketID
         }, commandType: CommandType.StoredProcedure);
-        return rows >= 0;
+        return true; // exception = failure; no exception = success regardless of SET NOCOUNT
     }
 
     public async Task<bool> ClearPaymentAsync(ClearPaymentRequest r)
     {
         using var conn = db.Create();
         conn.Open();
-        var rows = await conn.ExecuteAsync("spClearPayment", new
+        await conn.ExecuteAsync("spClearPayment", new
         {
             r.LocationID, r.LocationIDBilling, r.TableID, r.TicketID
         }, commandType: CommandType.StoredProcedure);
-        return rows >= 0;
+        return true;
     }
 
     public async Task<decimal> GetPaidTotalAsync(int locationID, string receipt, int unitNo, int? payTypeID = null)
@@ -74,10 +75,19 @@ public class PaymentRepository(IDbConnectionFactory db) : IPaymentRepository
         using var conn = db.Create();
         conn.Open();
         const string sql = @"
-            SELECT PaymentID PayTypeID, Descrip PayTypeName, IsActive
+            SELECT PaymentID PayTypeID, Descrip PayTypeName, IsActive,
+                   ISNULL([Type],0) [Type], ISNULL(IsSwipe,0) IsSwipe
             FROM Paytype
             WHERE IsActive=1
             ORDER BY OrderNo, Descrip";
         return await conn.QueryAsync<PayTypeDto>(sql);
+    }
+
+    public async Task<IEnumerable<PaymentNoteDto>> GetPaymentNotesAsync()
+    {
+        using var conn = db.Create();
+        conn.Open();
+        const string sql = "SELECT Note FROM PaymentNotes ORDER BY OrderNo";
+        return await conn.QueryAsync<PaymentNoteDto>(sql);
     }
 }

@@ -30,4 +30,7 @@ public class PaymentAppService(IPaymentRepository payRepo)
 
     public Task<IEnumerable<PayTypeDto>> GetPayTypesAsync(int locationID) =>
         payRepo.GetPayTypesAsync(locationID);
+
+    public Task<IEnumerable<PaymentNoteDto>> GetPaymentNotesAsync() =>
+        payRepo.GetPaymentNotesAsync();
 }

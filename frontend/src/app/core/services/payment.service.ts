@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import {
-  PayTypeDto, PaymentSummaryDto, AddPaymentRequest,
+  PayTypeDto, PaymentNoteDto, PaymentSummaryDto, AddPaymentRequest,
   ClearPaymentRequest, SuspendRequest, RecallRequest, SuspendListItem
 } from '../models/payment.models';
 
@@ -14,6 +14,10 @@ export class PaymentService {
 
   getPayTypes() {
     return this.http.get<PayTypeDto[]>(`${BASE}/types`);
+  }
+
+  getPaymentNotes() {
+    return this.http.get<PaymentNoteDto[]>(`${BASE}/notes`);
   }
 
   getPaymentSummary(locationIDBilling: number, tableID: number, ticketID: number, receipt: string, billTotal: number) {
