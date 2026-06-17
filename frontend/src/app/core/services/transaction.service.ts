@@ -7,7 +7,8 @@ import {
   ChangePriceRequest, SaveInvoiceRequest, CancelInvoiceRequest, SendKotRequest,
   DecreaseQtyRequest, SplitQtyRequest, DiscountRemoveRequest,
   ItemCommentRequest, TagRequest, PacksRequest, MobileNoRequest,
-  MoveItemsRequest, MergeTableRequest, ShiftEndRequest
+  MoveItemsRequest, MergeTableRequest, ShiftEndRequest,
+  ServiceChargeUpdateRequest
 } from '../models/transaction.models';
 
 const BASE = `${environment.apiUrl}/api/transaction`;
@@ -77,6 +78,10 @@ export class TransactionService {
 
   removeDiscount(req: DiscountRemoveRequest) {
     return this.http.post<void>(`${BASE}/remove-discount`, req);
+  }
+
+  updateServiceCharge(req: ServiceChargeUpdateRequest) {
+    return this.http.post<void>(`${BASE}/service-charge`, req);
   }
 
   removeServiceCharge(locationIDBilling: number, tableID: number, ticketID: number) {

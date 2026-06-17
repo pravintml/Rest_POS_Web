@@ -59,8 +59,8 @@ public class TransactionAppService(ITransactionRepository txRepo)
     public Task<bool> ServiceChargeUpdateAsync(ServiceChargeRequest req) =>
         txRepo.ServiceChargeUpdateAsync(req);
 
-    public Task<bool> ServiceChargeRemoveAsync(int locationID, int locationIDBilling, int tableID, long ticketID) =>
-        txRepo.ServiceChargeRemoveAsync(locationID, locationIDBilling, tableID, ticketID);
+    public Task<bool> ServiceChargeRemoveAsync(int locationID, int locationIDBilling, int tableID, long ticketID, long cashierID, string cashier) =>
+        txRepo.ServiceChargeRemoveAsync(locationID, locationIDBilling, tableID, ticketID, cashierID, cashier);
 
     public Task<bool> SaveTransactionAsync(int locationID, string receipt, int unitNo, long cashierID, int transStatus, string docNo) =>
         txRepo.SaveTransactionAsync(locationID, receipt, unitNo, cashierID, transStatus, docNo);

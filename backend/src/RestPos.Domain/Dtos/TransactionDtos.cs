@@ -148,7 +148,13 @@ public record DiscountRemoveRequest(
     int LocationIDBilling,
     int TableID,
     long TicketID,
-    long RowNo
+    long RowNo,
+    // Fields for the ServiceChargeUpdate chain that follows discount removal (mirrors legacy)
+    string Receipt,
+    int StewardID,
+    string StewardName,
+    decimal ServiceCharge,
+    int DecimalPointsCurrency
 );
 
 public record ItemCommentRequest(

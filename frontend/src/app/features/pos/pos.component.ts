@@ -24,7 +24,7 @@ import { MasterService } from '../../core/services/master.service';
 
 import { SysConfig } from '../../core/models/config.models';
 import { ProductMaster } from '../../core/models/product.models';
-import { OrderLineDto, ItemCommentRequest } from '../../core/models/transaction.models';
+import { OrderLineDto, ItemCommentRequest, ServiceChargeUpdateRequest } from '../../core/models/transaction.models';
 import { PayTypeDto, PaymentLineDto, SuspendListItem } from '../../core/models/payment.models';
 import {
   BillingLocation, TableInfo, Steward, TicketInfo
@@ -38,6 +38,13 @@ import { ProductBrowserComponent } from './browser/product-browser.component';
 import { MenuReportDialogComponent } from './dialogs/menu-report-dialog.component';
 
 type SelectionStage = 'location' | 'tables' | 'tickets' | 'steward' | 'pos';
+
+/** Each row rendered in the bill grid. Virtual subtotal rows are computed from the data. */
+type BillDisplayRow =
+  | { kind: 'item';     data: OrderLineDto }
+  | { kind: 'discount'; data: OrderLineDto }
+  | { kind: 'sc';       data: OrderLineDto }
+  | { kind: 'subtotal'; amount: number; isFinal: boolean; i: number };
 
 @Component({
   selector: 'app-pos',
@@ -110,10 +117,59 @@ export class PosComponent implements OnInit, OnDestroy {
   // ── Computed display ─────────────────────────────────────────────────────
   readonly decimalPlaces = computed(() => this.config()?.decimalPointsCurrency ?? 2);
   readonly locationName = computed(() => this.locationIDBillingName() || this.config()?.locationName || '');
-  readonly itemCount = computed(() => this.orderItems().reduce((s, i) => s + i.qty, 0));
+  readonly itemCount = computed(() =>
+    this.orderItems().filter(i => i.documentID <= 4).reduce((s, i) => s + i.qty, 0)
+  );
   readonly selectedLine = computed(() =>
     this.orderItems().find(i => i.rowNo === this.selectedRowNo()) ?? null
   );
+
+  /** Bill grid rows with virtual SUB TOTAL rows inserted between groups (items / discounts / SC). */
+  readonly billDisplayRows = computed<BillDisplayRow[]>(() => {
+    const items = this.orderItems();
+    if (!items.length) return [];
+
+    const rows: BillDisplayRow[] = [];
+    let running = 0;
+    let prevGroup: 'item' | 'discount' | 'sc' | null = null;
+    let subIdx = 0;
+
+    for (const item of items) {
+      const group: 'item' | 'discount' | 'sc' =
+        item.documentID <= 4 ? 'item' : item.documentID === 6 ? 'discount' : 'sc';
+
+      if (prevGroup !== null && prevGroup !== group) {
+        rows.push({ kind: 'subtotal', amount: running, isFinal: false, i: subIdx++ });
+      }
+
+      switch (group) {
+        case 'item':
+          running += (item.documentID === 1 || item.documentID === 3) ? item.nett : -item.nett;
+          rows.push({ kind: 'item', data: item });
+          break;
+        case 'discount':
+          running -= item.nett;
+          rows.push({ kind: 'discount', data: item });
+          break;
+        case 'sc':
+          running += item.nett;
+          rows.push({ kind: 'sc', data: item });
+          break;
+      }
+      prevGroup = group;
+    }
+
+    rows.push({ kind: 'subtotal', amount: running, isFinal: true, i: subIdx });
+    return rows;
+  });
+
+  /** Final running total from the bill grid — mirrors legacy txtTotal (billValue) which is the last accumulated amount including items, discounts, and SC. */
+  readonly displayTotal = computed(() => {
+    const rows = this.billDisplayRows();
+    if (!rows.length) return 0;
+    const last = rows[rows.length - 1];
+    return last.kind === 'subtotal' ? last.amount : 0;
+  });
 
   // ── Dialog state ─────────────────────────────────────────────────────────
   showDiscount = false;
@@ -121,6 +177,7 @@ export class PosComponent implements OnInit, OnDestroy {
   showSuspend = false;
   showReceipt = false;
   suspendMode: SuspendDialogMode = 'suspend';
+  discountDialogIsPercentage = true;
 
   // ── Mobile bill toggle ────────────────────────────────────────────────────
   showBillMobile = signal(false);
@@ -135,9 +192,10 @@ export class PosComponent implements OnInit, OnDestroy {
 
   // ── Discount level (1-5 = line discount tier, 0 = default) ───────────────
   discountLevelId = signal(0);
+  showDiscountLevelPicker = signal(false);
   readonly discountLevelLabel = computed(() => {
     const lvl = this.discountLevelId();
-    return lvl === 0 ? 'DISCOUNT LEVEL' : `DISC LVL ${lvl}`;
+    return lvl === 0 ? 'DISC LEVEL' : `DISC LVL ${lvl}`;
   });
 
   // ── Merge table overlay ────────────────────────────────────────────────────
@@ -319,13 +377,42 @@ export class PosComponent implements OnInit, OnDestroy {
 
   private enterPOS() {
     this.selectionStage.set('pos');
-    this.loadBill();
+    this.refreshBill();
     setTimeout(() => this.codeInput?.nativeElement?.focus(), 100);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Bill load
   // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Recalculate service charge (if configured > 0), then reload the bill.
+   * Mirrors legacy RefreshGrid(isUpdateServiceCharge=true).
+   * Used after any operation that changes the bill total.
+   */
+  private refreshBill() {
+    const cfg = this.config();
+    const sess = this.session();
+    if (cfg && cfg.serviceCharge > 0 && this.ticketID() !== 0 && sess) {
+      this.txSvc.updateServiceCharge({
+        cashier: sess.name,
+        receipt: this.currentReceipt(),
+        locationIDBilling: this.locationIDBilling(),
+        tableID: this.tableID(),
+        ticketID: this.ticketID(),
+        stewardID: this.stewardId(),
+        stewardName: this.stewardName(),
+        serviceCharge: cfg.serviceCharge,
+        decimalPointsCurrency: this.decimalPlaces()
+      } as ServiceChargeUpdateRequest).subscribe({
+        complete: () => this.loadBill(),
+        error:    () => this.loadBill()
+      });
+    } else {
+      this.loadBill();
+    }
+  }
+
   loadBill() {
     const cfg = this.config();
     if (!cfg) return;
@@ -445,7 +532,7 @@ export class PosComponent implements OnInit, OnDestroy {
         this.busy.set(false);
         this.numpadBuffer.set('');
         if (this.codeInput) this.codeInput.nativeElement.value = '';
-        this.loadBill();
+        this.refreshBill();
         this.toast('success', 'Added', `${p.productName} × ${qty}`, 1500);
         setTimeout(() => this.codeInput?.nativeElement?.focus(), 50);
       },
@@ -495,7 +582,7 @@ export class PosComponent implements OnInit, OnDestroy {
           next: () => {
             this.busy.set(false);
             this.selectedRowNo.set(null);
-            this.loadBill();
+            this.refreshBill();
             this.toast('info', 'Voided', line.descrip);
           },
           error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to void item'); }
@@ -581,7 +668,7 @@ export class PosComponent implements OnInit, OnDestroy {
       productID: line.productID,
       rowNo: line.rowNo
     }).subscribe({
-      next: () => { this.busy.set(false); this.loadBill(); this.toast('info', 'Qty decreased', line.descrip); },
+      next: () => { this.busy.set(false); this.refreshBill(); this.toast('info', 'Qty decreased', line.descrip); },
       error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to decrease qty'); }
     });
   }
@@ -605,7 +692,7 @@ export class PosComponent implements OnInit, OnDestroy {
       rowNo: line.rowNo,
       qty
     }).subscribe({
-      next: () => { this.busy.set(false); this.numpadClear(); this.loadBill(); this.toast('success', 'Split', `${qty} split off`); },
+      next: () => { this.busy.set(false); this.numpadClear(); this.refreshBill(); this.toast('success', 'Split', `${qty} split off`); },
       error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to split qty'); }
     });
   }
@@ -622,22 +709,37 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Remove discount from selected line
+  // Remove discount — item-level when a line is selected, bill-level otherwise
+  // Mirrors legacy RunDiscountRemove: rowNo=0 → subtotal discount removal
   // ─────────────────────────────────────────────────────────────────────────
   removeDiscount() {
+    if (!this.auth.hasPermission('DISCREM')) {
+      this.toast('warn', 'Permission Denied', 'Remove discount permission denied');
+      return;
+    }
+    if (this.orderItems().length === 0) { this.toast('warn', 'No Items', 'No items in bill'); return; }
     const line = this.selectedLine();
-    if (!line) { this.toast('warn', 'Select Item', 'Please select an item first'); return; }
     const sess = this.session()!;
     this.busy.set(true);
+    const cfg = this.config()!;
     this.txSvc.removeDiscount({
       locationID: sess.locationId,
-      productCode: line.productCode,
+      productCode: '',            // legacy always sends '' (only '**' for bulk-remove, unsupported)
       locationIDBilling: this.locationIDBilling(),
       tableID: this.tableID(),
       ticketID: this.ticketID(),
-      rowNo: line.rowNo
+      rowNo: line ? line.rowNo : 0,   // rowNo=0 → removes bill-level discount
+      receipt: this.currentReceipt(),
+      stewardID: this.stewardId(),
+      stewardName: this.stewardName(),
+      serviceCharge: cfg.serviceCharge,
+      decimalPointsCurrency: this.decimalPlaces()
     }).subscribe({
-      next: () => { this.busy.set(false); this.loadBill(); this.toast('info', 'Discount Removed', line.descrip); },
+      next: () => {
+        this.busy.set(false);
+        this.refreshBill();
+        this.toast('info', 'Discount Removed', line ? line.descrip : 'Bill discount removed');
+      },
       error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to remove discount'); }
     });
   }
@@ -661,7 +763,7 @@ export class PosComponent implements OnInit, OnDestroy {
       rowNo: line.rowNo,
       price
     }).subscribe({
-      next: () => { this.busy.set(false); this.numpadClear(); this.loadBill(); this.toast('success', 'Price Changed', line.descrip); },
+      next: () => { this.busy.set(false); this.numpadClear(); this.refreshBill(); this.toast('success', 'Price Changed', line.descrip); },
       error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to change price'); }
     });
   }
@@ -678,11 +780,68 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Discount
+  // Discount — AMOUNT
+  // Line selected  → item-level discount  (rowNo, isSubTotal=false, documentID=line)
+  // No line        → bill-level discount  (rowNo=0, isSubTotal=true, documentID=6)
+  // Numpad has value → apply directly without dialog; empty → open dialog
+  // Mirrors legacy: btnDiscount_Click → IsAccess("DISCOUNT") → RunDiscount(false)
   // ─────────────────────────────────────────────────────────────────────────
-  openDiscount() {
-    if (!this.selectedLine()) { this.toast('warn', 'Select Item', 'Please select an item to discount'); return; }
-    this.showDiscount = true;
+  openDiscountAmount() {
+    if (!this.auth.hasPermission('DISCOUNT')) {
+      this.toast('warn', 'Permission Denied', 'Discount amount permission denied');
+      return;
+    }
+    if (this.orderItems().length === 0) { this.toast('warn', 'No Items', 'No items in bill'); return; }
+    const line = this.selectedLine();
+    const val = parseFloat(this.numpadBuffer());
+    if (!isNaN(val) && val > 0) {
+      this.numpadClear();
+      this.onDiscountApplied(this.buildDiscountResult(val, false, line));
+    } else {
+      this.discountDialogIsPercentage = false;
+      this.showDiscount = true;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Discount — PERCENTAGE
+  // Same two-level logic as DISCOUNT, but isPercentage=true.
+  // Mirrors legacy: btnDiscountPercentage_Click → IsAccess("DISCOUNTPER") → RunDiscount(true)
+  // ─────────────────────────────────────────────────────────────────────────
+  openDiscountPercent() {
+    if (!this.auth.hasPermission('DISCOUNTPER')) {
+      this.toast('warn', 'Permission Denied', 'Discount % permission denied');
+      return;
+    }
+    if (this.orderItems().length === 0) { this.toast('warn', 'No Items', 'No items in bill'); return; }
+    const line = this.selectedLine();
+    const val = parseFloat(this.numpadBuffer());
+    if (!isNaN(val) && val > 0 && val <= 100) {
+      this.numpadClear();
+      this.onDiscountApplied(this.buildDiscountResult(val, true, line));
+    } else {
+      this.discountDialogIsPercentage = true;
+      this.showDiscount = true;
+    }
+  }
+
+  /**
+   * Builds a DiscountResult for the API call.
+   * line=null  → bill-level: rowNo=0, isSubTotal=true, documentID=6
+   * line!=null → item-level: uses line's rowNo and documentID
+   */
+  private buildDiscountResult(discount: number, isPercentage: boolean, line: OrderLineDto | null): DiscountResult {
+    const item = !!line;
+    return {
+      rowNo:       item ? line!.rowNo : 0,
+      productCode: item ? line!.productCode : '',
+      discount,
+      isPercentage,
+      isSubTotal:  !item,
+      discountID:  this.discountLevelId() || 2,
+      netAmount:   item ? line!.nett : this.displayTotal(),
+      documentID:  item ? line!.documentID : 6
+    };
   }
 
   onDiscountApplied(result: DiscountResult) {
@@ -712,7 +871,7 @@ export class PosComponent implements OnInit, OnDestroy {
       ticketID: this.ticketID(),
       rowNo: result.rowNo
     }).subscribe({
-      next: () => { this.busy.set(false); this.loadBill(); this.toast('success', 'Discount', 'Applied'); },
+      next: () => { this.busy.set(false); this.refreshBill(); this.toast('success', 'Discount', 'Applied'); },
       error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to apply discount'); }
     });
   }
@@ -774,7 +933,7 @@ export class PosComponent implements OnInit, OnDestroy {
       receipt: this.currentReceipt(),
       unitNo: sess.unitNo,
       cashierID: sess.cashierId,
-      amount: this.billTotal(),
+      amount: this.displayTotal(),
       transStatus: 1
     }).subscribe({
       next: res => {
@@ -799,7 +958,7 @@ export class PosComponent implements OnInit, OnDestroy {
       recallNo: suspendNo,
       recallUnitNo: sess.unitNo
     }).subscribe({
-      next: () => { this.busy.set(false); this.loadBill(); this.toast('success', 'Recalled', `Invoice recalled`); },
+      next: () => { this.busy.set(false); this.refreshBill(); this.toast('success', 'Recalled', `Invoice recalled`); },
       error: (e) => {
         this.busy.set(false);
         this.toast('error', 'Error', e.error?.error ?? 'Failed to recall invoice');
@@ -834,7 +993,7 @@ export class PosComponent implements OnInit, OnDestroy {
       cashierID: sess.cashierId,
       billTypeID: 1,
       saleTypeID: 1,
-      billTotal: this.billTotal(),
+      billTotal: this.displayTotal(),
       decimalPoints: this.decimalPlaces(),
       tableName: this.tableName(),
       cashierName: sess.name
@@ -857,7 +1016,7 @@ export class PosComponent implements OnInit, OnDestroy {
       customerID: 0,
       customerType: 0,
       customerCode: '',
-      amount: this.billTotal(),
+      amount: this.displayTotal(),
       loyaltyType: 0,
       encodedName: sess.code,
       locationIDBilling: this.locationIDBilling(),
@@ -888,21 +1047,34 @@ export class PosComponent implements OnInit, OnDestroy {
       .filter(t => t?.trim());
     const payments = this.paymentLines();
     const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+    const items = this.orderItems();
+    const saleItems = items.filter(i => i.documentID === 1 || i.documentID === 3);
+    const now = new Date();
 
     this.receiptData.set({
       receiptNo,
       zNo: cfg.zno,
-      date: new Date().toLocaleString(),
+      date: now.toLocaleDateString(),
+      time: now.toLocaleTimeString(),
       cashier: sess.name,
       unitNo: sess.unitNo,
+      tableNo: this.tableName() || undefined,
+      stewardName: this.stewardName() || undefined,
+      tagNo: items.find(i => i.tagNo)?.tagNo ?? undefined,
+      ticketID: this.ticketID() || undefined,
+      label: '',
       headerLines,
       footerLines,
-      items: this.orderItems(),
+      items,
       payments,
-      billTotal: this.billTotal(),
+      billTotal: this.displayTotal(),
       totalPaid,
-      change: Math.max(0, totalPaid - this.billTotal()),
-      decimalPoints: this.decimalPlaces()
+      change: Math.max(0, totalPaid - this.displayTotal()),
+      decimalPoints: this.decimalPlaces(),
+      soldQty: saleItems.length,
+      pieces: saleItems.reduce((s, i) => s + i.qty, 0),
+      totalDiscount: saleItems.reduce((s, i) => s + i.discount, 0)
+        + items.filter(i => i.documentID === 6).reduce((s, i) => s + i.nett, 0)
     });
   }
 
@@ -1021,12 +1193,28 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // DISCOUNT LEVEL — cycles 0→1→2→3→4→5→0
+  // DISCOUNT LEVEL — numpad value 1-5 sets directly; empty opens picker
+  // Mirrors legacy: btnDiscountLevel_Click → IsAccess("DISC_LEVEL") → RunChangeDiscountLevel
   // ─────────────────────────────────────────────────────────────────────────
-  cycleDiscountLevel() {
-    this.discountLevelId.update(lvl => (lvl >= 5 ? 0 : lvl + 1));
-    const lvl = this.discountLevelId();
-    this.toast('info', 'Discount Level', lvl === 0 ? 'Reset to default' : `Level ${lvl} active`, 1500);
+  openDiscountLevel() {
+    if (!this.auth.hasPermission('DISC_LEVEL')) {
+      this.toast('warn', 'Permission Denied', 'Discount level change permission denied');
+      return;
+    }
+    const val = parseInt(this.numpadBuffer(), 10);
+    if (val >= 1 && val <= 5) {
+      this.discountLevelId.set(val);
+      this.numpadClear();
+      this.toast('info', 'Discount Level', `Level ${val} active`, 1500);
+    } else {
+      this.showDiscountLevelPicker.set(true);
+    }
+  }
+
+  selectDiscountLevel(level: number) {
+    this.discountLevelId.set(level);
+    this.showDiscountLevelPicker.set(false);
+    this.toast('info', 'Discount Level', level === 0 ? 'Reset to default' : `Level ${level} active`, 1500);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1055,7 +1243,7 @@ export class PosComponent implements OnInit, OnDestroy {
               next: () => {
                 this.busy.set(false);
                 this.selectedRowNo.set(null);
-                this.loadBill();
+                this.refreshBill();
                 this.toast('success', 'Moved', `"${line.descrip}" moved to new ticket #${res.ticketId}`);
               },
               error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to move item'); }
@@ -1118,7 +1306,7 @@ export class PosComponent implements OnInit, OnDestroy {
           locationIDBillingToBeMerged: this.locationIDBilling(),
           ticketIDToBeMerged: ticket.ticketID
         }).subscribe({
-          next: () => { this.busy.set(false); this.loadBill(); this.toast('success', 'Merged', `Ticket #${ticket.ticketID} merged in`); },
+          next: () => { this.busy.set(false); this.refreshBill(); this.toast('success', 'Merged', `Ticket #${ticket.ticketID} merged in`); },
           error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to merge table'); }
         });
       }

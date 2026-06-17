@@ -212,6 +212,24 @@ export interface DiscountRemoveRequest {
   tableID: number;
   ticketID: number;
   rowNo: number;
+  receipt: string;
+  stewardID: number;
+  stewardName: string;
+  serviceCharge: number;
+  decimalPointsCurrency: number;
+}
+
+/** Sent to POST /api/transaction/service-charge. LocationID/CashierID/Cashier/UnitNo are overridden from JWT on the backend. */
+export interface ServiceChargeUpdateRequest {
+  cashier: string;              // '' — overridden from JWT
+  receipt: string;
+  locationIDBilling: number;
+  tableID: number;
+  ticketID: number;
+  stewardID: number;
+  stewardName: string;
+  serviceCharge: number;
+  decimalPointsCurrency: number;
 }
 
 export interface ItemCommentRequest {

@@ -51,11 +51,24 @@ export type PaymentCompleteEvent = PaymentLineDto[];
     <div class="bill-scroll">
       <!-- Original items -->
       @for (item of orderItems; track item.rowNo) {
-        @if (item.documentID !== 5) {
+        @if (item.documentID === 1 || item.documentID === 3) {
           <div class="bill-row item-row">
-            <span class="br-desc">
-              {{ item.qty % 1 === 0 ? item.qty.toFixed(0) : item.qty.toFixed(3) }}&nbsp;{{ item.descrip }}
-            </span>
+            <span class="br-desc">{{ item.qty % 1 === 0 ? item.qty.toFixed(0) : item.qty.toFixed(3) }}&nbsp;{{ item.descrip }}</span>
+            <span class="br-amt">{{ item.nett | number:'1.' + dp() + '-' + dp() }}</span>
+          </div>
+        } @else if (item.documentID === 2 || item.documentID === 4) {
+          <div class="bill-row item-row return-row">
+            <span class="br-desc">{{ item.qty % 1 === 0 ? item.qty.toFixed(0) : item.qty.toFixed(3) }}&nbsp;{{ item.descrip }} (RETURN)</span>
+            <span class="br-amt">-{{ item.nett | number:'1.' + dp() + '-' + dp() }}</span>
+          </div>
+        } @else if (item.documentID === 6) {
+          <div class="bill-row disc-row">
+            <span class="br-desc">{{ item.descrip || 'DISCOUNT' }}</span>
+            <span class="br-amt disc-amt">-{{ item.nett | number:'1.' + dp() + '-' + dp() }}</span>
+          </div>
+        } @else if (item.documentID === 9 || item.documentID === 10) {
+          <div class="bill-row sc-row">
+            <span class="br-desc">SERVICE CHARGE</span>
             <span class="br-amt">{{ item.nett | number:'1.' + dp() + '-' + dp() }}</span>
           </div>
         }
@@ -219,9 +232,12 @@ export type PaymentCompleteEvent = PaymentLineDto[];
       display: flex; justify-content: space-between; align-items: baseline;
       padding: 0.18rem 0.65rem; font-size: 0.78rem;
     }
-    .item-row { color: #cbd5e1; }
-    .item-row .br-desc { flex: 1; margin-right: 0.5rem; word-break: break-word; }
-    .item-row .br-amt { white-space: nowrap; font-weight: 500; }
+    .bill-row .br-desc { flex: 1; margin-right: 0.5rem; word-break: break-word; }
+    .bill-row .br-amt  { white-space: nowrap; font-weight: 500; }
+    .item-row   { color: #cbd5e1; }
+    .return-row { color: #94a3b8; font-style: italic; }
+    .disc-row   { color: #f87171; }
+    .sc-row     { color: #c084fc; }
     .tender-row { color: #93c5fd; font-weight: 600; }
     .subtotal-row {
       color: #64748b; font-size: 0.72rem; font-style: italic;
@@ -275,7 +291,7 @@ export type PaymentCompleteEvent = PaymentLineDto[];
       width: 100%; height: 100%;
       padding: 0.4rem; border: 1px solid #334155; border-radius: 4px;
       background: #1e2634; color: #94a3b8; font-weight: 700; font-size: 0.82rem;
-      cursor: pointer; text-align: center; transition: all 0.1s; min-height: 2.6rem;
+      cursor: pointer; text-align: center; transition: all 0.1s; min-height: 5.2rem;
     }
     .note-btn:hover:not(:disabled) { background: #0f766e; color: #fff; border-color: #14b8a6; }
     .note-btn:disabled { opacity: 0.4; cursor: not-allowed; }

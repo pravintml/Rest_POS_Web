@@ -195,18 +195,18 @@
           <button class="act-btn" (click)="shiftEnd()" [disabled]="busy()">SHIFT END</button>
           <button class="act-btn less-btn" (click)="showMore.set(false)">CANCEL</button>
           <button class="act-btn"
-            (click)="removeDiscount()" [disabled]="!selectedLine() || busy()">
+            (click)="removeDiscount()" [disabled]="orderItems().length === 0 || busy()">
             REMOVE DISCOUNT
           </button>
-          <button class="act-btn"
-            (click)="openDiscount()" [disabled]="!selectedLine() || busy()">
-            DISCOUNT%
+          <button class="act-btn disc-pct-btn"
+            (click)="openDiscountPercent()" [disabled]="orderItems().length === 0 || busy()">
+            DISCOUNT %
           </button>
-          <button class="act-btn"
-            (click)="openDiscount()" [disabled]="!selectedLine() || busy()">
+          <button class="act-btn disc-amt-btn"
+            (click)="openDiscountAmount()" [disabled]="orderItems().length === 0 || busy()">
             DISCOUNT
           </button>
-          <button class="act-btn" (click)="cycleDiscountLevel()" [class.active-level]="discountLevelId() > 0">
+          <button class="act-btn" (click)="openDiscountLevel()" [class.active-level]="discountLevelId() > 0">
             {{ discountLevelLabel() }}
           </button>
           <button class="act-btn"
@@ -269,24 +269,58 @@
             <p>No items yet</p>
           </div>
         } @else {
-          @for (item of orderItems(); track item.rowNo) {
-            <div class="order-item"
-                 [class.selected]="selectedRowNo() === item.rowNo"
-                 [class.voided]="item.documentID === 5"
-                 [class.return-item]="item.documentID === 2 || item.documentID === 4"
-                 (click)="selectRow(item)">
-              <div class="item-row1">
-                <span class="item-name">{{ item.descrip }}</span>
-                @if (item.isPrinted) { <i class="pi pi-send item-sent" pTooltip="KOT sent"></i> }
+          @for (row of billDisplayRows(); track $index) {
+
+            @if (row.kind === 'item') {
+              <!-- ── Regular sale / return item ── -->
+              <div class="order-item"
+                   [class.selected]="selectedRowNo() === row.data.rowNo"
+                   [class.voided]="row.data.documentID === 5"
+                   [class.return-item]="row.data.documentID === 2 || row.data.documentID === 4"
+                   (click)="selectRow(row.data)">
+                <div class="item-row1">
+                  <span class="item-name">{{ row.data.descrip }}</span>
+                  @if (row.data.isPrinted) { <i class="pi pi-send item-sent" pTooltip="KOT sent"></i> }
+                </div>
+                <div class="item-row2">
+                  <span class="item-qty-price">{{ row.data.qty | number:'1.0-3' }} × {{ row.data.price | number:'1.' + decimalPlaces() + '-' + decimalPlaces() }}</span>
+                  @if (row.data.discount > 0) {
+                    <span class="item-disc">-{{ row.data.discount | number:'1.2-2' }}</span>
+                  }
+                  <span class="item-nett">{{ row.data.nett | number:'1.' + decimalPlaces() + '-' + decimalPlaces() }}</span>
+                </div>
               </div>
-              <div class="item-row2">
-                <span class="item-qty-price">{{ item.qty | number:'1.0-3' }} × {{ item.price | number:'1.' + decimalPlaces() + '-' + decimalPlaces() }}</span>
-                @if (item.discount > 0) {
-                  <span class="item-disc">-{{ item.discount | number:'1.2-2' }}</span>
-                }
-                <span class="item-nett">{{ item.nett | number:'1.' + decimalPlaces() + '-' + decimalPlaces() }}</span>
+
+            } @else if (row.kind === 'discount') {
+              <!-- ── Discount row (DocID 6) ── -->
+              <div class="order-item discount-row">
+                <div class="bill-special-row">
+                  <span class="special-badge disc-badge">DISC</span>
+                  <span class="special-desc">{{ row.data.descrip }}</span>
+                  <span class="special-amount disc-amount">-{{ row.data.nett | number:'1.' + decimalPlaces() + '-' + decimalPlaces() }}</span>
+                </div>
               </div>
-            </div>
+
+            } @else if (row.kind === 'sc') {
+              <!-- ── Service charge row (DocID 9/10) ── -->
+              <div class="order-item sc-row">
+                <div class="bill-special-row">
+                  <span class="special-badge sc-badge">SC</span>
+                  <span class="special-desc">SERVICE CHARGE</span>
+                  <span class="special-amount sc-amount">{{ row.data.nett | number:'1.' + decimalPlaces() + '-' + decimalPlaces() }}</span>
+                </div>
+              </div>
+
+            } @else {
+              <!-- ── Virtual SUB TOTAL row ── -->
+              <div class="order-item subtotal-row" [class.final-total]="row.isFinal">
+                <div class="bill-special-row">
+                  <span class="special-desc sub-label">SUB TOTAL</span>
+                  <span class="special-amount sub-amount">{{ row.amount | number:'1.' + decimalPlaces() + '-' + decimalPlaces() }}</span>
+                </div>
+              </div>
+            }
+
           }
         }
       </div>
@@ -294,7 +328,7 @@
       <div class="order-totals">
         <div class="total-row grand">
           <span>TOTAL</span>
-          <span class="total-val">{{ billTotal() | number:'1.' + decimalPlaces() + '-' + decimalPlaces() }}</span>
+          <span class="total-val">{{ displayTotal() | number:'1.' + decimalPlaces() + '-' + decimalPlaces() }}</span>
         </div>
       </div>
 
@@ -358,6 +392,36 @@
       </div>
     }
 
+    <!-- DISCOUNT LEVEL PICKER OVERLAY ───────────────────────────────────────── -->
+    @if (showDiscountLevelPicker()) {
+      <div class="disc-level-overlay">
+        <div class="disc-level-panel">
+          <div class="disc-level-header">
+            <span><i class="pi pi-tag"></i> SELECT DISCOUNT LEVEL</span>
+            <button class="merge-close" (click)="showDiscountLevelPicker.set(false)"><i class="pi pi-times"></i></button>
+          </div>
+          <div class="disc-level-grid">
+            <button class="disc-level-btn" [class.active]="discountLevelId() === 0"
+                    (click)="selectDiscountLevel(0)">
+              <i class="pi pi-undo"></i>
+              DEFAULT
+            </button>
+            @for (l of [1,2,3,4,5]; track l) {
+              <button class="disc-level-btn" [class.active]="discountLevelId() === l"
+                      (click)="selectDiscountLevel(l)">
+                <span class="level-num">{{ l }}</span>
+                LEVEL {{ l }}
+              </button>
+            }
+          </div>
+          <div class="disc-level-hint">
+            <i class="pi pi-info-circle"></i>
+            Type 1–5 on the numpad and press DISC LEVEL to set directly
+          </div>
+        </div>
+      </div>
+    }
+
   </div><!-- end pos-main -->
   }<!-- end @if pos stage -->
 
@@ -368,7 +432,9 @@
 <app-discount-dialog
   [(visible)]="showDiscount"
   [line]="selectedLine()"
+  [billTotal]="displayTotal()"
   [initialLevel]="discountLevelId()"
+  [defaultIsPercentage]="discountDialogIsPercentage"
   (applied)="onDiscountApplied($event)" />
 
 <app-payment-dialog
@@ -382,7 +448,7 @@
 <app-suspend-dialog
   [(visible)]="showSuspend"
   [mode]="suspendMode"
-  [billTotal]="billTotal()"
+  [billTotal]="displayTotal()"
   [suspendList]="suspendList()"
   (suspendConfirmed)="onSuspendConfirmed()"
   (recallSelected$)="onRecallSelected($event)" />

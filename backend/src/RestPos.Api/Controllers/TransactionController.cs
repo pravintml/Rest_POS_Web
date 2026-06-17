@@ -107,7 +107,13 @@ public class TransactionController(TransactionAppService txSvc) : ControllerBase
     public async Task<IActionResult> RemoveDiscount([FromBody] DiscountRemoveRequest req)
     {
         var ok = await txSvc.DiscountRemoveAsync(req with { LocationID = LocationId });
-        return ok ? Ok() : BadRequest(new { error = "Failed to remove discount" });
+        if (!ok) return BadRequest(new { error = "Failed to remove discount" });
+        // Mirror legacy RunDiscountRemove: always call ServiceChargeUpdate after removal
+        await txSvc.ServiceChargeUpdateAsync(new ServiceChargeRequest(
+            LocationId, req.Receipt, CashierId, CashierName, UnitNo,
+            req.LocationIDBilling, req.TableID, req.TicketID,
+            req.StewardID, req.StewardName, req.ServiceCharge, req.DecimalPointsCurrency));
+        return Ok();
     }
 
     // ── POST: save invoice (completes sale) ──────────────────────────────
@@ -151,7 +157,7 @@ public class TransactionController(TransactionAppService txSvc) : ControllerBase
     public async Task<IActionResult> RemoveServiceCharge(
         [FromQuery] int locationIDBilling, [FromQuery] int tableID, [FromQuery] long ticketID)
     {
-        var ok = await txSvc.ServiceChargeRemoveAsync(LocationId, locationIDBilling, tableID, ticketID);
+        var ok = await txSvc.ServiceChargeRemoveAsync(LocationId, locationIDBilling, tableID, ticketID, CashierId, CashierName);
         return ok ? Ok() : BadRequest(new { error = "Failed to remove service charge" });
     }
 

@@ -21,7 +21,7 @@ public interface ITransactionRepository
     Task<string> CancelInvoiceAsync(CancelInvoiceRequest req);
     Task<bool> SendKotAsync(SendKotRequest req);
     Task<bool> ServiceChargeUpdateAsync(ServiceChargeRequest req);
-    Task<bool> ServiceChargeRemoveAsync(int locationID, int locationIDBilling, int tableID, long ticketID);
+    Task<bool> ServiceChargeRemoveAsync(int locationID, int locationIDBilling, int tableID, long ticketID, long cashierID, string cashier);
     Task<bool> SaveTransactionAsync(int locationID, string receipt, int unitNo, long cashierID, int transStatus, string docNo);
 
     Task<BillSummaryDto> GetBillSummaryAsync(int locationID, int locationIDBilling, int tableID, long ticketID, int unitNo, string receipt, int documentID, int decimalPoints);
@@ -164,7 +164,8 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
         {
             r.LocationID, r.ProductCode, r.LocationIDBilling, r.TableID, r.TicketID, r.RowNo
         }, commandType: CommandType.StoredProcedure);
-        return result == "0";
+        // Legacy executeCommand returns true for both empty resultset (null) and "0" — match that here.
+        return result == null || result == "0";
     }
 
     public async Task<string> SaveInvoiceAsync(SaveInvoiceRequest r)
@@ -238,19 +239,19 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
             r.StewardID, r.StewardName, r.ServiceCharge,
             DecimalPointsCurrency = r.DecimalPointsCurrency
         }, commandType: CommandType.StoredProcedure);
-        return result == "0";
+        return result == null || result == "0";
     }
 
-    public async Task<bool> ServiceChargeRemoveAsync(int locationID, int locationIDBilling, int tableID, long ticketID)
+    public async Task<bool> ServiceChargeRemoveAsync(int locationID, int locationIDBilling, int tableID, long ticketID, long cashierID, string cashier)
     {
         using var conn = db.Create();
         conn.Open();
         var result = await conn.QueryFirstOrDefaultAsync<string>("spServiceChargeRemove", new
         {
-            LocationID = locationID, LocationIDBilling = locationIDBilling,
-            TableID = tableID, TicketID = ticketID
+            LocationID = locationID, CashierID = cashierID, Cashier = cashier,
+            LocationIDBilling = locationIDBilling, TableID = tableID, TicketID = ticketID
         }, commandType: CommandType.StoredProcedure);
-        return result == "0";
+        return result == null || result == "0";
     }
 
     public async Task<bool> SaveTransactionAsync(int locationID, string receipt, int unitNo, long cashierID, int transStatus, string docNo)
@@ -272,9 +273,12 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
 
         const string itemSql = @"
             SELECT ProductID, ProductCode,
-                   Descrip + CASE WHEN BatchNo<>'' THEN ' - '+BatchNo ELSE '' END
-                           + CASE WHEN SerialNo<>'' THEN ' - '+SerialNo ELSE '' END
-                           + CASE WHEN ExpiaryDate IS NULL THEN '' ELSE ' - '+CONVERT(varchar(10),ExpiaryDate,103) END Descrip,
+                   CASE WHEN DocumentID = 6
+                        THEN ISNULL((SELECT TOP 1 Descrip FROM DiscountType WHERE DId = SDID), 'DISCOUNT')
+                        ELSE Descrip + CASE WHEN BatchNo<>'' THEN ' - '+BatchNo ELSE '' END
+                                     + CASE WHEN SerialNo<>'' THEN ' - '+SerialNo ELSE '' END
+                                     + CASE WHEN ExpiaryDate IS NULL THEN '' ELSE ' - '+CONVERT(varchar(10),ExpiaryDate,103) END
+                   END Descrip,
                    Price, Qty, Amount,
                    IDis1, IDiscount1,
                    Nett, DocumentID, RowNo,
@@ -313,6 +317,8 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
 
             if (docId == 1 || docId == 3) { billTotal += (decimal)r.Nett; pieces += (long)(decimal)r.Qty; soldQty++; }
             else if (docId == 2 || docId == 4) { billTotal -= (decimal)r.Nett; soldQty++; }
+            else if (docId == 6)              { billTotal -= (decimal)r.Nett; }   // subtotal discount
+            else if (docId == 9 || docId == 10) { billTotal += (decimal)r.Nett; } // service charge
 
             items.Add(new OrderLineDto(
                 ProductID: (long)r.ProductID,

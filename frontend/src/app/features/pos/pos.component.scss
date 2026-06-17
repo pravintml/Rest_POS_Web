@@ -210,6 +210,62 @@ $header-h: 52px;
     &.voided { opacity: 0.45; text-decoration: line-through; }
     &.return-item { color: #ff9999; }
 
+    // ── Bill special rows (discount / SC / subtotal) ──────────────────────
+    .bill-special-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.82rem;
+
+      .special-badge {
+        font-size: 0.6rem;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        padding: 0.1rem 0.35rem;
+        border-radius: 3px;
+        flex-shrink: 0;
+      }
+      .special-desc { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .special-amount { font-weight: 700; font-variant-numeric: tabular-nums; margin-left: auto; }
+
+      .sub-label { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    }
+
+    // Discount row
+    &.discount-row {
+      cursor: default;
+      background: rgba(230, 57, 70, 0.05);
+      .disc-badge  { background: rgba(230, 57, 70, 0.2); color: #f28090; }
+      .disc-amount { color: #f28090; }
+    }
+
+    // Service-charge row
+    &.sc-row {
+      cursor: default;
+      background: rgba(99, 102, 241, 0.05);
+      .sc-badge  { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; }
+      .sc-amount { color: #a5b4fc; }
+    }
+
+    // Sub-total virtual row
+    &.subtotal-row {
+      cursor: default;
+      background: rgba(255, 255, 255, 0.03);
+      padding-top: 0.35rem;
+      padding-bottom: 0.35rem;
+      .sub-label  { color: $text-muted; }
+      .sub-amount { color: $text-muted; }
+    }
+
+    // Final subtotal (grand total) — highlighted like the legacy blue row
+    &.final-total {
+      background: rgba(45, 198, 83, 0.08);
+      border-top: 1px solid rgba(45, 198, 83, 0.25);
+      border-bottom: none;
+      .sub-label  { color: $accent2; font-size: 0.85rem; }
+      .sub-amount { color: $accent2; font-size: 0.95rem; }
+    }
+
     .item-row1 {
       display: flex;
       align-items: center;
@@ -691,6 +747,104 @@ $header-h: 52px;
 .otu-badge { color: #74b9ff; }
 
 // ── Receipt print overlay ──────────────────────────
+// ── Discount level picker overlay ──────────────────────────────────────────
+.disc-level-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.disc-level-panel {
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: 10px;
+  width: min(380px, 90vw);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.disc-level-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid $border;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: $text;
+  letter-spacing: 0.3px;
+  i { color: #a5b4fc; margin-right: 0.4rem; }
+}
+.disc-level-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+.disc-level-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.75rem 0.5rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid $border;
+  border-radius: 8px;
+  color: $text-muted;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  .level-num {
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1;
+    color: $text;
+  }
+
+  i { font-size: 1.2rem; color: $text-muted; }
+
+  &:hover { background: rgba(165,180,252,0.1); border-color: rgba(165,180,252,0.3); color: #a5b4fc; }
+  &:active { transform: scale(0.95); }
+
+  &.active {
+    background: rgba(99,102,241,0.2);
+    border-color: rgba(99,102,241,0.5);
+    color: #a5b4fc;
+    .level-num { color: #a5b4fc; }
+    i { color: #a5b4fc; }
+  }
+}
+.disc-level-hint {
+  padding: 0.5rem 0.75rem 0.75rem;
+  font-size: 0.7rem;
+  color: $text-dim;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-top: 1px solid $border;
+  i { font-size: 0.75rem; flex-shrink: 0; }
+}
+
+// ── DISCOUNT / DISCOUNT% button colour accents ─────────────────────────────
+.disc-pct-btn {
+  color: #fbbf24;
+  border-color: rgba(234,179,8,0.25);
+  &:hover:not([disabled]) { background: rgba(234,179,8,0.1); color: #fde68a; }
+}
+.disc-amt-btn {
+  color: #34d399;
+  border-color: rgba(52,211,153,0.25);
+  &:hover:not([disabled]) { background: rgba(52,211,153,0.1); color: #6ee7b7; }
+}
+
 // ── Merge table overlay ────────────────────────────────────────────────────
 .merge-overlay {
   position: absolute;
