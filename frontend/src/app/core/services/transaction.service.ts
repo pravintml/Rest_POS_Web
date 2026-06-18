@@ -7,7 +7,7 @@ import {
   ChangePriceRequest, SaveInvoiceRequest, CancelInvoiceRequest, SendKotRequest,
   DecreaseQtyRequest, SplitQtyRequest, DiscountRemoveRequest,
   ItemCommentRequest, TagRequest, PacksRequest, MobileNoRequest,
-  MoveItemsRequest, MergeTableRequest, ShiftEndRequest,
+  MoveItemsRequest, MergeTableRequest, ChangeTableRequest, ShiftEndRequest,
   ServiceChargeUpdateRequest
 } from '../models/transaction.models';
 
@@ -128,6 +128,18 @@ export class TransactionService {
 
   mergeTable(req: MergeTableRequest) {
     return this.http.post<void>(`${BASE}/merge-table`, req);
+  }
+
+  changeTable(req: ChangeTableRequest) {
+    return this.http.post<void>(`${BASE}/change-table`, req);
+  }
+
+  isCustomerCopyPrinted(locationIDBilling: number, tableID: number, ticketID: number) {
+    const params = new HttpParams()
+      .set('locationIDBilling', locationIDBilling)
+      .set('tableID', tableID)
+      .set('ticketID', ticketID);
+    return this.http.get<{ printed: boolean }>(`${BASE}/customer-copy-printed`, { params });
   }
 
   shiftEnd(req: ShiftEndRequest) {

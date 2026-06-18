@@ -198,12 +198,24 @@ export class PosComponent implements OnInit, OnDestroy {
     return lvl === 0 ? 'DISC LEVEL' : `DISC LVL ${lvl}`;
   });
 
-  // ── Merge table overlay ────────────────────────────────────────────────────
-  showMergeOverlay = signal(false);
-  mergeStage = signal<'tables' | 'tickets'>('tables');
-  mergeTables = signal<import('../../core/models/master.models').TableInfo[]>([]);
-  mergeSourceTickets = signal<import('../../core/models/master.models').TicketInfo[]>([]);
-  mergeSelectedTable = signal<import('../../core/models/master.models').TableInfo | null>(null);
+  // ── Merge table mode (reuses the location/table/ticket selection flow) ──────
+  // Legacy: btnMerge_Click stashes the CURRENT bill as the source, then the user
+  // navigates to pick a DESTINATION table+ticket (any billing location). The
+  // source bill's items move into the destination; you end up on the destination.
+  mergeMode = signal(false);
+  mergeSrcTableID = signal(0);
+  mergeSrcTableName = signal('');
+  mergeSrcBilling = signal(0);
+  mergeSrcBillingName = signal('');
+  mergeSrcTicketID = signal(0);
+
+  // ── Change table mode (reuses the location/table selection flow) ────────────
+  changeTableMode = signal(false);
+  changeSrcTableID = signal(0);
+  changeSrcTableName = signal('');
+  changeSrcBilling = signal(0);
+  changeSrcBillingName = signal('');
+  changeSrcTicketID = signal(0);
 
   payTypes = signal<PayTypeDto[]>([]);
   paymentNotes = signal<number[]>([]);
@@ -280,8 +292,9 @@ export class PosComponent implements OnInit, OnDestroy {
       next: list => {
         this.tables.set(list);
         this.selectionLoading.set(false);
-        // Auto-select if only 1 table AND only 1 billing location (mirrors legacy)
-        if (list.length === 1 && this.billingLocations().length === 1) {
+        // Auto-select if only 1 table AND only 1 billing location (mirrors legacy).
+        // Never auto-select in change/merge mode — the user must pick the target.
+        if (list.length === 1 && this.billingLocations().length === 1 && !this.changeTableMode() && !this.mergeMode()) {
           this.onTableSelected(list[0]);
         } else {
           this.selectionStage.set('tables');
@@ -295,6 +308,18 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   onTableSelected(table: TableInfo) {
+    // In change-table mode, picking a target table performs the move (legacy:
+    // TableButton_Clicked → tableIDToBeChanged != 0 branch). No ticket/steward sub-flow.
+    if (this.changeTableMode()) {
+      this.doChangeTable(table);
+      return;
+    }
+    // In merge mode, the picked table is the destination; resolve its ticket then merge
+    // (legacy: TableButton_Clicked → tableIDToBeMerged != 0 branch).
+    if (this.mergeMode()) {
+      this.resolveMergeDestination(table);
+      return;
+    }
     this.tableID.set(table.tableID);
     this.tableName.set(table.tableName);
     this.selectionLoading.set(true);
@@ -330,6 +355,11 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   onTicketSelected(ticket: TicketInfo) {
+    // In merge mode, the picked ticket is the destination — merge into it.
+    if (this.mergeMode()) {
+      this.doMerge(ticket.ticketID);
+      return;
+    }
     this.ticketID.set(ticket.ticketID);
     this.stewardId.set(ticket.stewardID);
     this.stewardName.set(ticket.stewardName);
@@ -339,6 +369,11 @@ export class PosComponent implements OnInit, OnDestroy {
   onNewTicketForTable() {
     this.masterSvc.allocateTicket().subscribe({
       next: res => {
+        // In merge mode, merge the source bill into the freshly allocated destination ticket.
+        if (this.mergeMode()) {
+          this.doMerge(res.ticketId);
+          return;
+        }
         this.ticketID.set(res.ticketId);
         this.proceedAfterTicket(true);
       },
@@ -375,9 +410,9 @@ export class PosComponent implements OnInit, OnDestroy {
     this.enterPOS();
   }
 
-  private enterPOS() {
+  private enterPOS(isLoad = false) {
     this.selectionStage.set('pos');
-    this.refreshBill();
+    this.refreshBill(isLoad);
     setTimeout(() => this.codeInput?.nativeElement?.focus(), 100);
   }
 
@@ -386,14 +421,55 @@ export class PosComponent implements OnInit, OnDestroy {
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
-   * Recalculate service charge (if configured > 0), then reload the bill.
-   * Mirrors legacy RefreshGrid(isUpdateServiceCharge=true).
-   * Used after any operation that changes the bill total.
+   * Full bill refresh — faithful port of legacy
+   * RefreshGrid(bool isLoad, bool isUpdateServiceCharge, bool isUpdateLoyaltyDiscount).
+   *
+   *  • isLoad — clear the ticket's in-progress payment rows BEFORE loading the grid
+   *    (legacy GetTempItemDetails(isLoad:true) → ClearPayment → spClearPayment).
+   *    Passed `true` by change-table & merge (legacy RefreshGrid(true)); left `false`
+   *    by move/add/void/etc. (legacy RefreshGrid()).
+   *  • isUpdateServiceCharge — recalculate the service charge before loading.
+   *  • isUpdateLoyaltyDiscount — re-apply loyalty/employee auto-discount. The web POS
+   *    has no loyalty/employee auto-discount subsystem yet, so this is currently a
+   *    no-op kept for signature parity with legacy.
+   *
+   * Always finishes by reloading the full grid (loadBill).
    */
-  private refreshBill() {
+  private refreshBill(isLoad = false, isUpdateServiceCharge = true, isUpdateLoyaltyDiscount = true) {
+    // Step 3 in legacy (isUpdateLoyaltyDiscount): re-apply loyalty / employee auto-discount.
+    // The web POS has no loyalty/employee auto-discount subsystem yet, so this flag is
+    // honoured as a no-op extension point to keep parity with legacy RefreshGrid.
+    if (isUpdateLoyaltyDiscount) { /* no-op until loyalty/employee discount is ported */ }
+
+    // Step 1 (legacy isLoad): clear payment rows for this ticket, then continue.
+    if (isLoad && this.ticketID() !== 0) {
+      const sess = this.session();
+      if (sess) {
+        this.paySvc.clearPayment({
+          locationID: sess.locationId,
+          locationIDBilling: this.locationIDBilling(),
+          tableID: this.tableID(),
+          ticketID: this.ticketID()
+        }).subscribe({
+          complete: () => this.updateServiceChargeThenLoad(isUpdateServiceCharge),
+          error:    () => this.updateServiceChargeThenLoad(isUpdateServiceCharge)
+        });
+        return;
+      }
+    }
+    this.updateServiceChargeThenLoad(isUpdateServiceCharge);
+  }
+
+  /** Step 2 (legacy isUpdateServiceCharge): recalc service charge, then load the full grid. */
+  private updateServiceChargeThenLoad(isUpdateServiceCharge: boolean) {
     const cfg = this.config();
     const sess = this.session();
-    if (cfg && cfg.serviceCharge > 0 && this.ticketID() !== 0 && sess) {
+    // Mirror legacy ServiceChargeUpdate(): call unconditionally whenever there is a ticket,
+    // passing the CURRENT location's rate (incl. 0). spServiceChargeUpdate always drops the
+    // existing service-charge line and only re-adds it when the amount > 0 — so a rate of 0
+    // removes a stale charge (e.g. moving a bill from a 10% location to a 0% location).
+    // Do NOT gate on cfg.serviceCharge > 0, or the stale charge would never be cleared.
+    if (isUpdateServiceCharge && cfg && this.ticketID() !== 0 && sess) {
       this.txSvc.updateServiceCharge({
         cashier: sess.name,
         receipt: this.currentReceipt(),
@@ -424,6 +500,15 @@ export class PosComponent implements OnInit, OnDestroy {
       next: summary => {
         this.orderItems.set(summary.items);
         this.billTotal.set(summary.billTotal);
+        // Full refresh of bill-derived header fields, mirroring legacy RefreshGrid():
+        // re-apply the steward from the loaded bill. Backend returns '' only when the
+        // bill has no rows — in that case keep a just-selected steward (legacy:
+        // `if (stewardID != string.Empty)`), otherwise reflect the bill's actual steward
+        // (important after merge/change-table switches the active ticket).
+        if (summary.stewardID !== '') {
+          this.stewardId.set(+summary.stewardID || 0);
+          this.stewardName.set(summary.stewardName);
+        }
         this.billLoading.set(false);
       },
       error: () => this.billLoading.set(false)
@@ -1089,14 +1174,31 @@ export class PosComponent implements OnInit, OnDestroy {
     this.resetToTables();
   }
 
-  resetToTables() {
+  /** Clear the active bill-view context when navigating back to a selection screen. */
+  private clearBillContext() {
     this.tableID.set(0);
     this.tableName.set('');
     this.ticketID.set(0);
     this.stewardId.set(0);
     this.stewardName.set('');
     this.selectedRowNo.set(null);
+  }
+
+  resetToTables() {
+    this.clearBillContext();
     this.selectionStage.set('tables');
+  }
+
+  /** Order-screen button: go to the table-selection screen for the current billing location. */
+  goToTables() {
+    this.clearBillContext();
+    this.selectionStage.set('tables');
+  }
+
+  /** Order-screen button: go to the billing-location selection screen. */
+  goToLocations() {
+    this.clearBillContext();
+    this.selectionStage.set('location');
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1132,12 +1234,12 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // TAG — use numpad value or prompt
+  // TAG — read the value from the PLU / barcode input box (legacy btnTag_Click
+  // reads txtMainNumeric.Text). Type/scan the tag into the box, then press TAG.
   // ─────────────────────────────────────────────────────────────────────────
-  updateTag() {
-    const buf = this.numpadBuffer().trim();
-    const tagNo = (buf || window.prompt('Tag No:', '')) ?? '';
-    if (!tagNo) return;
+  updateTag(raw: string) {
+    const tagNo = (raw ?? '').trim();
+    if (!tagNo) { this.toast('warn', 'Tag', 'Enter a tag in the PLU / barcode box first'); return; }
     const sess = this.session()!;
     this.busy.set(true);
     this.txSvc.updateTag({
@@ -1173,12 +1275,12 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // MOBILE NO — use numpad value or prompt
+  // MOBILE NO — read the value from the PLU / barcode input box (legacy
+  // btnMobileNo_Click reads txtMainNumeric.Text). Type the number, then press MOBILE NO.
   // ─────────────────────────────────────────────────────────────────────────
-  updateMobileNo() {
-    const buf = this.numpadBuffer().trim();
-    const mobileNo = (buf || window.prompt('Mobile No:', '')) ?? '';
-    if (!mobileNo) return;
+  updateMobileNo(raw: string) {
+    const mobileNo = (raw ?? '').trim();
+    if (!mobileNo) { this.toast('warn', 'Mobile No', 'Enter a mobile number in the PLU / barcode box first'); return; }
     const sess = this.session()!;
     this.busy.set(true);
     this.txSvc.updateMobileNo({
@@ -1244,7 +1346,8 @@ export class PosComponent implements OnInit, OnDestroy {
               next: () => {
                 this.busy.set(false);
                 this.selectedRowNo.set(null);
-                this.refreshBill();
+                this.ticketID.set(res.ticketId);   // legacy btnMoveItems_Click: ticketID = ticketIDNew — open the new ticket
+                this.refreshBill();                 // legacy RefreshGrid() (isLoad = false)
                 this.toast('success', 'Moved', `"${line.descrip}" moved to new ticket #${res.ticketId}`);
               },
               error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to move item'); }
@@ -1257,64 +1360,201 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // MERGE — merge another ticket's items into the current one
+  // MERGE — move the current bill into another table's bill (legacy: spMergeTable)
+  // Mirrors legacy btnMerge_Click + TableButton_Clicked (tableIDToBeMerged branch):
+  // stash the CURRENT bill as the source, re-enter the billing-location → table →
+  // ticket selection flow, then pick the DESTINATION (in ANY billing location).
+  // The source's items move into the destination ticket; you end up on the
+  // destination. The SP also archives a copy for audit.
   // ─────────────────────────────────────────────────────────────────────────
   openMerge() {
-    this.selectionLoading.set(true);
-    this.masterSvc.getTables(this.locationIDBilling()).subscribe({
-      next: list => {
-        this.selectionLoading.set(false);
-        this.mergeTables.set(list);
-        this.mergeStage.set('tables');
-        this.showMergeOverlay.set(true);
+    if (this.orderItems().length === 0) {
+      this.toast('warn', 'Merge', 'No data to merge');
+      return;
+    }
+    if (!this.auth.hasPermission('MERGE')) {
+      this.toast('warn', 'Permission Denied', 'Merge permission denied');
+      return;
+    }
+    this.busy.set(true);
+    this.txSvc.isCustomerCopyPrinted(this.locationIDBilling(), this.tableID(), this.ticketID()).subscribe({
+      next: res => {
+        this.busy.set(false);
+        if (res.printed && !this.auth.hasPermission('CHANGETBLAFTERCUSTCOPY')) {
+          this.toast('warn', 'Permission Denied', 'You are not allowed to merge after printing customer copy');
+          return;
+        }
+        this.enterMergeMode();
       },
-      error: () => { this.selectionLoading.set(false); this.toast('error', 'Error', 'Could not load tables'); }
+      error: () => { this.busy.set(false); this.toast('error', 'Error', 'Could not verify customer copy status'); }
     });
   }
 
-  onMergeTableSelected(table: import('../../core/models/master.models').TableInfo) {
-    this.mergeSelectedTable.set(table);
+  private enterMergeMode() {
+    // Stash the current bill as the SOURCE (legacy: tableIDToBeMerged = tableID …).
+    this.mergeSrcTableID.set(this.tableID());
+    this.mergeSrcTableName.set(this.tableName());
+    this.mergeSrcBilling.set(this.locationIDBilling());
+    this.mergeSrcBillingName.set(this.locationIDBillingName());
+    this.mergeSrcTicketID.set(this.ticketID());
+    this.mergeMode.set(true);
+    this.selectionStage.set('location');
+  }
+
+  /** Resolve the destination ticket on the picked table, then merge (legacy ticket sub-flow). */
+  private resolveMergeDestination(table: TableInfo) {
+    this.tableID.set(table.tableID);
+    this.tableName.set(table.tableName);
     this.selectionLoading.set(true);
     this.masterSvc.getTickets(this.locationIDBilling(), table.tableID).subscribe({
       next: tickets => {
         this.selectionLoading.set(false);
-        // Exclude the current ticket
-        const filtered = tickets.filter(t => t.ticketID !== this.ticketID() || table.tableID !== this.tableID());
-        if (filtered.length === 0) { this.toast('warn', 'No Tickets', 'No other open tickets on this table'); return; }
-        this.mergeSourceTickets.set(filtered);
-        this.mergeStage.set('tickets');
+        // Can't merge a bill into itself — drop the source ticket if it's on this table.
+        const usable = tickets.filter(t => !(
+          table.tableID === this.mergeSrcTableID() &&
+          this.locationIDBilling() === this.mergeSrcBilling() &&
+          t.ticketID === this.mergeSrcTicketID()));
+        if (usable.length === 0) {
+          // No existing destination ticket → allocate a fresh one (legacy getTicketID).
+          this.masterSvc.allocateTicket().subscribe({
+            next: res => this.doMerge(res.ticketId),
+            error: () => this.toast('error', 'Error', 'Could not allocate ticket')
+          });
+        } else if (usable.length === 1) {
+          this.doMerge(usable[0].ticketID);
+        } else {
+          this.tickets.set(usable);
+          this.selectionStage.set('tickets');
+        }
       },
       error: () => { this.selectionLoading.set(false); this.toast('error', 'Error', 'Could not load tickets'); }
     });
   }
 
-  onMergeTicketSelected(ticket: import('../../core/models/master.models').TicketInfo) {
-    const src = this.mergeSelectedTable()!;
+  /** Calls spMergeTable: source (stashed) → destination (current table + given ticket). */
+  private doMerge(destTicketId: number) {
     const sess = this.session()!;
-    this.showMergeOverlay.set(false);
-
-    this.confirmSvc.confirm({
-      message: `Merge ticket #${ticket.ticketID} from ${src.tableName} into the current bill?`,
-      accept: () => {
-        this.busy.set(true);
-        this.txSvc.mergeTable({
-          locationID: sess.locationId,
-          cashierID: sess.cashierId,
-          locationIDBilling: this.locationIDBilling(),
-          tableID: this.tableID(),
-          ticketID: this.ticketID(),
-          tableIDToBeMerged: src.tableID,
-          locationIDBillingToBeMerged: this.locationIDBilling(),
-          ticketIDToBeMerged: ticket.ticketID
-        }).subscribe({
-          next: () => { this.busy.set(false); this.refreshBill(); this.toast('success', 'Merged', `Ticket #${ticket.ticketID} merged in`); },
-          error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to merge table'); }
-        });
+    this.busy.set(true);
+    this.txSvc.mergeTable({
+      locationID: sess.locationId,
+      cashierID: sess.cashierId,
+      locationIDBilling: this.locationIDBilling(),            // destination billing (newly selected)
+      tableID: this.tableID(),                                // destination table
+      ticketID: destTicketId,                                 // destination ticket
+      tableIDToBeMerged: this.mergeSrcTableID(),              // source table (stashed)
+      locationIDBillingToBeMerged: this.mergeSrcBilling(),    // source billing (stashed)
+      ticketIDToBeMerged: this.mergeSrcTicketID()             // source ticket (stashed)
+    }).subscribe({
+      next: () => {
+        this.ticketID.set(destTicketId);                      // view the destination bill
+        this.mergeMode.set(false);
+        this.busy.set(false);
+        this.enterPOS(true);   // legacy RefreshGrid(true): clears payments + full reload
+        this.toast('success', 'Merged', `Bill merged into ${this.tableName()}`);
+      },
+      error: () => {
+        this.busy.set(false);
+        this.toast('error', 'Error', 'Table merge failed');
+        this.cancelMerge();
       }
     });
   }
 
-  closeMergeOverlay() { this.showMergeOverlay.set(false); }
+  /** Abort merge mode and return to the original bill. */
+  cancelMerge() {
+    this.locationIDBilling.set(this.mergeSrcBilling());
+    this.locationIDBillingName.set(this.mergeSrcBillingName());
+    this.tableID.set(this.mergeSrcTableID());
+    this.tableName.set(this.mergeSrcTableName());
+    this.ticketID.set(this.mergeSrcTicketID());
+    this.mergeMode.set(false);
+    this.enterPOS();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CHANGE TABLE — move entire bill to another table (legacy: spChangeTable)
+  // Mirrors legacy btnChangeTable_Click + TableButton_Clicked: stash the source
+  // table/billing-location, then re-enter the billing-location → table selection
+  // flow. Picking a target table (in ANY billing location) performs the move.
+  // The same ticket is preserved; the SP also archives a copy for audit.
+  // ─────────────────────────────────────────────────────────────────────────
+  openChangeTable() {
+    if (this.orderItems().length === 0) {
+      this.toast('warn', 'Change Table', 'No data to change');
+      return;
+    }
+    if (!this.auth.hasPermission('CHANGETABLE')) {
+      this.toast('warn', 'Permission Denied', 'Change table permission denied');
+      return;
+    }
+    this.busy.set(true);
+    this.txSvc.isCustomerCopyPrinted(this.locationIDBilling(), this.tableID(), this.ticketID()).subscribe({
+      next: res => {
+        this.busy.set(false);
+        if (res.printed && !this.auth.hasPermission('CHANGETBLAFTERCUSTCOPY')) {
+          this.toast('warn', 'Permission Denied', 'You are not allowed to change table after printing customer copy');
+          return;
+        }
+        this.enterChangeTableMode();
+      },
+      error: () => { this.busy.set(false); this.toast('error', 'Error', 'Could not verify customer copy status'); }
+    });
+  }
+
+  private enterChangeTableMode() {
+    // Stash the source context so it survives navigating the selection screens.
+    this.changeSrcTableID.set(this.tableID());
+    this.changeSrcTableName.set(this.tableName());
+    this.changeSrcBilling.set(this.locationIDBilling());
+    this.changeSrcBillingName.set(this.locationIDBillingName());
+    this.changeSrcTicketID.set(this.ticketID());
+    this.changeTableMode.set(true);
+    // Re-enter the billing-location screen (legacy panelLocation) so the target
+    // table can live in a different billing location.
+    this.selectionStage.set('location');
+  }
+
+  /** Performs the move once a target table is picked while in change-table mode. */
+  private doChangeTable(target: TableInfo) {
+    const sess = this.session()!;
+    this.busy.set(true);
+    this.txSvc.changeTable({
+      locationID: sess.locationId,
+      cashierID: sess.cashierId,
+      locationIDBilling: this.locationIDBilling(),          // target billing location (newly selected)
+      tableIDToBeChanged: this.changeSrcTableID(),           // source table
+      tableID: target.tableID,                               // target table
+      ticketID: this.changeSrcTicketID(),                    // same ticket (preserved)
+      locationIDBillingToBeChanged: this.changeSrcBilling()  // source billing location
+    }).subscribe({
+      next: () => {
+        // Activate the new table context, keeping the same ticket.
+        this.tableID.set(target.tableID);
+        this.tableName.set(target.tableName);
+        this.ticketID.set(this.changeSrcTicketID());
+        this.changeTableMode.set(false);
+        this.busy.set(false);
+        this.enterPOS(true);   // legacy RefreshGrid(true): clears payments + full reload
+        this.toast('success', 'Table Changed', `Bill moved to ${target.tableName}`);
+      },
+      error: () => {
+        this.busy.set(false);
+        this.toast('error', 'Error', 'Table change failed');
+        this.cancelChangeTable();
+      }
+    });
+  }
+
+  /** Abort change-table mode and return to the original bill. */
+  cancelChangeTable() {
+    this.locationIDBilling.set(this.changeSrcBilling());
+    this.locationIDBillingName.set(this.changeSrcBillingName());
+    this.tableID.set(this.changeSrcTableID());
+    this.tableName.set(this.changeSrcTableName());
+    this.ticketID.set(this.changeSrcTicketID());
+    this.changeTableMode.set(false);
+    this.enterPOS();
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // SHIFT END — enter cash-in-hand amount, confirm, call SP

@@ -287,6 +287,16 @@ export interface MergeTableRequest {
   ticketIDToBeMerged: number;
 }
 
+export interface ChangeTableRequest {
+  locationID: number;
+  cashierID: number;
+  locationIDBilling: number;
+  tableIDToBeChanged: number;
+  tableID: number;
+  ticketID: number;
+  locationIDBillingToBeChanged: number;
+}
+
 export interface ShiftEndRequest {
   locationID: number;
   cashierID: number;

@@ -92,6 +92,13 @@ public class TransactionAppService(ITransactionRepository txRepo)
     public Task<bool> MergeTableAsync(MergeTableRequest req) =>
         txRepo.MergeTableAsync(req);
 
+    public Task<bool> ChangeTableAsync(ChangeTableRequest req) =>
+        txRepo.ChangeTableAsync(req);
+
+    public Task<bool> IsCustomerCopyPrintedAsync(
+        int locationId, int unitNo, int locationIDBilling, int tableId, long ticketId) =>
+        txRepo.IsCustomerCopyPrintedAsync(locationId, unitNo, locationIDBilling, tableId, ticketId);
+
     public Task<bool> ShiftEndAsync(ShiftEndRequest req) =>
         txRepo.ShiftEndAsync(req);
 }

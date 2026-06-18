@@ -227,6 +227,23 @@ public class TransactionController(TransactionAppService txSvc) : ControllerBase
         return ok ? Ok() : BadRequest(new { error = "Failed to merge table" });
     }
 
+    // ── POST: change table (move entire bill to another table) ───────────
+    [HttpPost("change-table")]
+    public async Task<IActionResult> ChangeTable([FromBody] ChangeTableRequest req)
+    {
+        var ok = await txSvc.ChangeTableAsync(req with { LocationID = LocationId, CashierID = CashierId });
+        return ok ? Ok() : BadRequest(new { error = "Failed to change table" });
+    }
+
+    // ── GET: check if customer copy has been printed for current bill ────
+    [HttpGet("customer-copy-printed")]
+    public async Task<IActionResult> IsCustomerCopyPrinted(
+        [FromQuery] int locationIDBilling, [FromQuery] int tableID, [FromQuery] long ticketID)
+    {
+        var printed = await txSvc.IsCustomerCopyPrintedAsync(LocationId, UnitNo, locationIDBilling, tableID, ticketID);
+        return Ok(new { printed });
+    }
+
     // ── POST: shift end ──────────────────────────────────────────────────
     [HttpPost("shift-end")]
     public async Task<IActionResult> ShiftEnd([FromBody] ShiftEndRequest req)

@@ -36,6 +36,8 @@ public interface ITransactionRepository
 
     Task<bool> MoveItemsAsync(MoveItemsRequest req);
     Task<bool> MergeTableAsync(MergeTableRequest req);
+    Task<bool> ChangeTableAsync(ChangeTableRequest req);
+    Task<bool> IsCustomerCopyPrintedAsync(int locationId, int unitNo, int locationIDBilling, int tableId, long ticketId);
     Task<bool> ShiftEndAsync(ShiftEndRequest req);
 }
 
@@ -478,6 +480,40 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
             r.TableIDToBeMerged, r.LocationIDBillingToBeMerged, r.TicketIDToBeMerged
         }, commandType: CommandType.StoredProcedure);
         return result == "0";
+    }
+
+    public async Task<bool> ChangeTableAsync(ChangeTableRequest r)
+    {
+        using var conn = db.Create();
+        conn.Open();
+        var result = await conn.QueryFirstOrDefaultAsync<string>("spChangeTable", new
+        {
+            r.LocationID, r.CashierID, r.LocationIDBilling,
+            r.TableIDToBeChanged, r.TableID, r.TicketID,
+            r.LocationIDBillingToBeChanged
+        }, commandType: CommandType.StoredProcedure);
+        return result == "0";
+    }
+
+    public async Task<bool> IsCustomerCopyPrintedAsync(
+        int locationId, int unitNo, int locationIDBilling, int tableId, long ticketId)
+    {
+        using var conn = db.Create();
+        conn.Open();
+        const string sql = @"
+            SELECT IsCustomerCopy FROM TempItemDet
+            WHERE LocationID=@LocationID AND UnitNo=@UnitNo
+              AND DocumentID IN (1,2,3,4)
+              AND LocationIDBilling=@LocationIDBilling
+              AND TableID=@TableID AND TicketID=@TicketID
+              AND IsCustomerCopy=1";
+        var rows = await conn.QueryAsync<int>(sql, new
+        {
+            LocationID = locationId, UnitNo = unitNo,
+            LocationIDBilling = locationIDBilling,
+            TableID = tableId, TicketID = ticketId
+        });
+        return rows.Any();
     }
 
     public async Task<bool> ShiftEndAsync(ShiftEndRequest r)

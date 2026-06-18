@@ -50,6 +50,28 @@
   <!-- ── SELECTION OVERLAYS ────────────────────────────────────────────── -->
   @if (selectionStage() !== 'pos') {
     <div class="sel-overlay">
+      @if (changeTableMode()) {
+        <div class="sel-change-banner">
+          <span>
+            <i class="pi pi-arrows-h"></i>
+            CHANGE TABLE — moving ticket #{{ changeSrcTicketID() }} from {{ changeSrcTableName() }}. Select the target table.
+          </span>
+          <button class="sel-back-btn" (click)="cancelChangeTable()">
+            <i class="pi pi-times"></i> Cancel
+          </button>
+        </div>
+      }
+      @if (mergeMode()) {
+        <div class="sel-change-banner">
+          <span>
+            <i class="pi pi-sign-in"></i>
+            MERGE — moving ticket #{{ mergeSrcTicketID() }} from {{ mergeSrcTableName() }} into another bill. Select the destination table &amp; ticket.
+          </span>
+          <button class="sel-back-btn" (click)="cancelMerge()">
+            <i class="pi pi-times"></i> Cancel
+          </button>
+        </div>
+      }
       @if (selectionLoading()) {
         <div class="sel-loading"><p-progressspinner strokeWidth="4" /></div>
       }
@@ -169,7 +191,13 @@
             (click)="voidBill()" [disabled]="orderItems().length === 0 || busy()">
             CLEAR
           </button>
-          <button class="act-btn" (click)="resetToTables()" [disabled]="busy()">
+          <button class="act-btn" (click)="goToTables()" [disabled]="busy()">
+            TABLES
+          </button>
+          <button class="act-btn" (click)="goToLocations()" [disabled]="busy()">
+            BILLING LOCATION
+          </button>
+          <button class="act-btn" (click)="openChangeTable()" [disabled]="orderItems().length === 0 || busy()">
             CHANGE TABLE
           </button>
           <button class="act-btn"
@@ -178,9 +206,9 @@
           </button>
           <button class="act-btn" (click)="moveSelectedItem()" [disabled]="!selectedLine() || busy()">MOVE</button>
           <button class="act-btn" (click)="openMerge()" [disabled]="orderItems().length === 0 || busy()">MERGE</button>
-          <button class="act-btn" (click)="updateTag()" [disabled]="orderItems().length === 0 || busy()">TAG</button>
+          <button class="act-btn" (click)="updateTag(codeInput.value)" [disabled]="orderItems().length === 0 || busy()">TAG</button>
           <button class="act-btn" (click)="updatePacks()" [disabled]="orderItems().length === 0 || busy()">PACKS</button>
-          <button class="act-btn" (click)="updateMobileNo()" [disabled]="orderItems().length === 0 || busy()">MOBILE NO</button>
+          <button class="act-btn" (click)="updateMobileNo(codeInput.value)" [disabled]="orderItems().length === 0 || busy()">MOBILE NO</button>
           <button class="act-btn more-btn" (click)="showMore.set(true)">MORE</button>
         } @else {
           <!-- ── More panel ── -->
@@ -351,46 +379,6 @@
         [locationIDBilling]="locationIDBilling()"
         (productSelected)="onBrowserProductSelected($event)" />
     </section>
-
-    <!-- MERGE TABLE OVERLAY ──────────────────────────────────────────────── -->
-    @if (showMergeOverlay()) {
-      <div class="merge-overlay">
-        <div class="merge-panel">
-          <div class="merge-header">
-            @if (mergeStage() === 'tables') {
-              <span><i class="pi pi-table"></i> MERGE — Select Source Table</span>
-            } @else {
-              <span><i class="pi pi-ticket"></i> MERGE — Select Source Ticket</span>
-            }
-            <button class="merge-close" (click)="closeMergeOverlay()"><i class="pi pi-times"></i></button>
-          </div>
-          @if (selectionLoading()) {
-            <div class="merge-loading"><p-progressspinner strokeWidth="4" /></div>
-          } @else if (mergeStage() === 'tables') {
-            <div class="merge-grid">
-              @for (tbl of mergeTables(); track tbl.tableID) {
-                <button class="merge-btn" (click)="onMergeTableSelected(tbl)">{{ tbl.tableName }}</button>
-              }
-            </div>
-          } @else {
-            <div class="merge-tickets">
-              @for (tkt of mergeSourceTickets(); track tkt.ticketID) {
-                <button class="merge-btn merge-ticket-btn" (click)="onMergeTicketSelected(tkt)">
-                  <span>Ticket #{{ tkt.ticketID }}</span>
-                  <span class="merge-tkt-amount">{{ tkt.amount | number:'1.2-2' }}</span>
-                  @if (tkt.stewardName) { <span class="merge-tkt-steward">{{ tkt.stewardName }}</span> }
-                </button>
-              }
-            </div>
-            <div class="merge-back">
-              <button class="merge-back-btn" (click)="mergeStage.set('tables')">
-                <i class="pi pi-arrow-left"></i> Back
-              </button>
-            </div>
-          }
-        </div>
-      </div>
-    }
 
     <!-- DISCOUNT LEVEL PICKER OVERLAY ───────────────────────────────────────── -->
     @if (showDiscountLevelPicker()) {

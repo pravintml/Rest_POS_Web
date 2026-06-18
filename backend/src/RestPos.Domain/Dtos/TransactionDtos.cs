@@ -212,6 +212,16 @@ public record MergeTableRequest(
     long TicketIDToBeMerged
 );
 
+public record ChangeTableRequest(
+    int LocationID,
+    long CashierID,
+    int LocationIDBilling,
+    int TableIDToBeChanged,
+    int TableID,
+    long TicketID,
+    int LocationIDBillingToBeChanged
+);
+
 public record ShiftEndRequest(
     int LocationID,
     long CashierID,
