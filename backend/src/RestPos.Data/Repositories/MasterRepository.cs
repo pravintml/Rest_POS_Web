@@ -13,6 +13,7 @@ public interface IMasterRepository
     Task<IEnumerable<ItemLayer2Dto>> GetItemLayer2Async(long layer1Id);
     Task<IEnumerable<TicketDto>> GetAvailableTicketsAsync(int locationId, int billingLocationId, int tableId);
     Task<long> AllocateTicketAsync(int locationId);
+    Task<IEnumerable<ItemCommentOptionDto>> GetItemCommentsAsync();
 }
 
 public class MasterRepository(IDbConnectionFactory db) : IMasterRepository
@@ -48,6 +49,15 @@ public class MasterRepository(IDbConnectionFactory db) : IMasterRepository
         conn.Open();
         const string sql = "SELECT StewardID, StewardName FROM Steward ORDER BY OrderNo";
         return await conn.QueryAsync<StewardDto>(sql);
+    }
+
+    // Mirrors MasterFileService.GetItemCommentsForTouch (predefined item-comment buttons)
+    public async Task<IEnumerable<ItemCommentOptionDto>> GetItemCommentsAsync()
+    {
+        using var conn = db.Create();
+        conn.Open();
+        const string sql = "SELECT CommentID, Comment FROM ItemComment ORDER BY CommentID";
+        return await conn.QueryAsync<ItemCommentOptionDto>(sql);
     }
 
     // Mirrors MasterFileService.GetItemLayer1

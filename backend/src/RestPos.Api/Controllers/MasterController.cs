@@ -33,6 +33,13 @@ public class MasterController(IMasterRepository masterRepo) : ControllerBase
         return Ok(list);
     }
 
+    [HttpGet("item-comments")]
+    public async Task<IActionResult> GetItemComments()
+    {
+        var list = await masterRepo.GetItemCommentsAsync();
+        return Ok(list);
+    }
+
     [HttpGet("item-layer1")]
     public async Task<IActionResult> GetItemLayer1()
     {

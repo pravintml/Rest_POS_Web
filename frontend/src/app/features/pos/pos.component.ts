@@ -217,6 +217,21 @@ export class PosComponent implements OnInit, OnDestroy {
   changeSrcBillingName = signal('');
   changeSrcTicketID = signal(0);
 
+  // ── Item comment overlay (legacy panelComment) ──────────────────────────────
+  showCommentOverlay = signal(false);
+  commentOptions = signal<import('../../core/models/master.models').ItemCommentOption[]>([]);
+  commentText = signal('');
+  private commentLine: OrderLineDto | null = null;
+
+  // On-screen QWERTY keyboard for the comment overlay (legacy panelComment keyboard).
+  showCmtKeyboard = signal(false);
+  readonly kbRows: string[][] = [
+    ['1','2','3','4','5','6','7','8','9','0'],
+    ['Q','W','E','R','T','Y','U','I','O','P'],
+    ['A','S','D','F','G','H','J','K','L'],
+    ['Z','X','C','V','B','N','M',',','.','/'],
+  ];
+
   payTypes = signal<PayTypeDto[]>([]);
   paymentNotes = signal<number[]>([]);
   paymentLines = signal<PaymentLineDto[]>([]);
@@ -1202,34 +1217,62 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // COMMENT — get existing comment, prompt user, save
+  // COMMENT — legacy panelComment: predefined comment buttons (ItemComment) that
+  // append with " / ", plus free text, applied to the selected line.
   // ─────────────────────────────────────────────────────────────────────────
   openComment() {
     const line = this.selectedLine();
     if (!line) { this.toast('warn', 'Select Item', 'Please select an item first'); return; }
-    const sess = this.session()!;
+    this.commentLine = line;
+    this.busy.set(true);
+    // Load the existing comment + the predefined comment options together (legacy
+    // btnComment_Click → GetItemComment + LoadItemComment → GetItemCommentsForTouch).
     this.txSvc.getItemComment(
       this.locationIDBilling(), this.tableID(), this.ticketID(),
       line.rowNo, line.productID
     ).subscribe({
       next: res => {
-        const text = window.prompt('Item comment:', res.comment);
-        if (text === null) return;
-        this.busy.set(true);
-        this.txSvc.updateItemComment({
-          locationID: sess.locationId,
-          locationIDBilling: this.locationIDBilling(),
-          tableID: this.tableID(),
-          ticketID: this.ticketID(),
-          rowNo: line.rowNo,
-          productID: line.productID,
-          itemComment: text
-        }).subscribe({
-          next: () => { this.busy.set(false); this.loadBill(); this.toast('success', 'Comment', 'Saved'); },
-          error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to save comment'); }
+        this.commentText.set(res.comment ?? '');
+        this.masterSvc.getItemComments().subscribe({
+          next: opts => { this.commentOptions.set(opts); this.busy.set(false); this.showCommentOverlay.set(true); },
+          error: () => { this.commentOptions.set([]); this.busy.set(false); this.showCommentOverlay.set(true); }
         });
       },
-      error: () => this.toast('error', 'Error', 'Could not load comment')
+      error: () => { this.busy.set(false); this.toast('error', 'Error', 'Could not load comment'); }
+    });
+  }
+
+  /** Append a predefined comment, separated by " / " (legacy LoadItemComment button click). */
+  appendComment(opt: import('../../core/models/master.models').ItemCommentOption) {
+    this.commentText.update(c => c.trim() ? `${c.trim()} / ${opt.comment.trim()}` : opt.comment.trim());
+  }
+
+  clearComment() { this.commentText.set(''); }
+
+  closeCommentOverlay() { this.showCommentOverlay.set(false); this.showCmtKeyboard.set(false); this.commentLine = null; }
+
+  // On-screen keyboard handlers (append to the comment text).
+  toggleCmtKeyboard() { this.showCmtKeyboard.update(v => !v); }
+  kbKey(ch: string) { this.commentText.update(c => c + ch); }
+  kbBackspace() { this.commentText.update(c => c.slice(0, -1)); }
+
+  /** Save the comment for the selected line (legacy btnItemCommentOk_Click → UpdateItemComment). */
+  applyComment() {
+    const line = this.commentLine;
+    if (!line) { this.closeCommentOverlay(); return; }
+    const sess = this.session()!;
+    this.busy.set(true);
+    this.txSvc.updateItemComment({
+      locationID: sess.locationId,
+      locationIDBilling: this.locationIDBilling(),
+      tableID: this.tableID(),
+      ticketID: this.ticketID(),
+      rowNo: line.rowNo,
+      productID: line.productID,
+      itemComment: this.commentText().trim()
+    }).subscribe({
+      next: () => { this.busy.set(false); this.closeCommentOverlay(); this.loadBill(); this.toast('success', 'Comment', 'Saved'); },
+      error: () => { this.busy.set(false); this.toast('error', 'Error', 'Failed to save comment'); }
     });
   }
 

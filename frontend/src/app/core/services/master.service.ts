@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import {
   BillingLocation, TableInfo, Steward,
-  ItemLayer1, ItemLayer2, TicketInfo
+  ItemLayer1, ItemLayer2, TicketInfo, ItemCommentOption
 } from '../models/master.models';
 
 @Injectable({ providedIn: 'root' })
@@ -23,6 +23,10 @@ export class MasterService {
 
   getStewards() {
     return this.http.get<Steward[]>(`${this.base}/stewards`);
+  }
+
+  getItemComments() {
+    return this.http.get<ItemCommentOption[]>(`${this.base}/item-comments`);
   }
 
   getItemLayer1() {

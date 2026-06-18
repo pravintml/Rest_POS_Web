@@ -34,3 +34,8 @@ export interface TouchProduct {
   productID: number;
   productName: string;
 }
+
+export interface ItemCommentOption {
+  commentID: number;
+  comment: string;
+}
