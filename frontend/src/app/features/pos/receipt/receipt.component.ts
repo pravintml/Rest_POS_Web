@@ -14,6 +14,7 @@ export interface ReceiptData {
   stewardName?: string;
   tagNo?: string;
   ticketID?: number;
+  type?: string;         // billing location name e.g. 'TAKE AWAY' — shown as TYPE row
   label?: string;        // 'COPY' | 'REPRINTED' | '' — shown centred bold after divider
   headerLines: string[];
   footerLines: string[];
@@ -227,7 +228,14 @@ export class ReceiptComponent {
       l: `UNIT   : ${d.unitNo}`,
       r: `RECEIPT: ${d.receiptNo}`
     });
-    if (d.tableNo) {
+    if (d.type) {
+      rows.push({ k: 'div' });
+      rows.push({
+        k: 'pair',
+        l: `TYPE    : ${d.type}`,
+        r: d.tableNo ? `TABLE: ${d.tableNo}` : ''
+      });
+    } else if (d.tableNo) {
       rows.push({ k: 'pair', l: `TABLE   : ${d.tableNo}`, r: '' });
     }
     if (d.tagNo !== undefined || d.ticketID !== undefined) {

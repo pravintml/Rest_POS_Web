@@ -1058,6 +1058,7 @@ export class PosComponent implements OnInit, OnDestroy {
       time: now.toLocaleTimeString(),
       cashier: sess.name,
       unitNo: sess.unitNo,
+      type: this.locationIDBillingName() || undefined,
       tableNo: this.tableName() || undefined,
       stewardName: this.stewardName() || undefined,
       tagNo: items.find(i => i.tagNo)?.tagNo ?? undefined,
