@@ -39,6 +39,8 @@ public interface ITransactionRepository
     Task<bool> ChangeTableAsync(ChangeTableRequest req);
     Task<bool> IsCustomerCopyPrintedAsync(int locationId, int unitNo, int locationIDBilling, int tableId, long ticketId);
     Task<bool> ShiftEndAsync(ShiftEndRequest req);
+    Task<bool> LayawayAsync(LayawayRequest req);
+    Task<CustomerCopyResult> CustomerCopyAsync(CustomerCopyRequest req);
 }
 
 public class TransactionRepository(IDbConnectionFactory db) : ITransactionRepository
@@ -526,5 +528,87 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
             r.Amount, DayEnd = r.DayEnd, r.UnitNo
         }, commandType: CommandType.StoredProcedure);
         return result == "0";
+    }
+
+    public async Task<bool> LayawayAsync(LayawayRequest r)
+    {
+        using var conn = db.Create();
+        conn.Open();
+
+        // Mirror legacy GetCurrentOrderTerminals: check if any unprinted items exist routed to a terminal
+        const string checkSql = @"
+            SELECT COUNT(1)
+            FROM TempItemDet
+            WHERE LocationID = @LocationID
+              AND DocumentID IN (1,2,3,4,6,8,9) AND BillTypeID != 4
+              AND LocationIDBilling = @LocationIDBilling
+              AND TableID = @TableID AND TicketID = @TicketID
+              AND OrderTerminalID != 0
+              AND IsPrinted = 0";
+
+        var count = await conn.ExecuteScalarAsync<int>(checkSql, new
+        {
+            r.LocationID, r.LocationIDBilling, r.TableID, r.TicketID
+        });
+
+        if (count == 0) return false;
+
+        // Mirror legacy UpdateReadForPrinting (per-terminal loop collapsed to one UPDATE)
+        const string updateSql = @"
+            UPDATE TempItemDet
+            SET IsApp = 1, IsReadyForKOT = 1
+            WHERE LocationID = @LocationID
+              AND DocumentID IN (1,2,3,4,6,8,9) AND BillTypeID != 4
+              AND LocationIDBilling = @LocationIDBilling
+              AND TableID = @TableID AND TicketID = @TicketID
+              AND OrderTerminalID != 0
+              AND IsPrinted = 0";
+
+        await conn.ExecuteAsync(updateSql, new
+        {
+            r.LocationID, r.LocationIDBilling, r.TableID, r.TicketID
+        });
+
+        return true;
+    }
+
+    public async Task<CustomerCopyResult> CustomerCopyAsync(CustomerCopyRequest r)
+    {
+        using var conn = db.Create();
+        conn.Open();
+
+        // Mirror legacy IsPendingLayaway: unprinted items routed to a terminal
+        const string checkSql = @"
+            SELECT TOP 1 1
+            FROM TempItemDet
+            WHERE LocationID = @LocationID
+              AND LocationIDBilling = @LocationIDBilling
+              AND TableID = @TableID AND TicketID = @TicketID
+              AND DocumentID IN (1,2,3,4)
+              AND IsPrinted = 0 AND OrderTerminalID != 0";
+
+        var pending = await conn.ExecuteScalarAsync<int?>(checkSql, new
+        {
+            r.LocationID, r.LocationIDBilling, r.TableID, r.TicketID
+        });
+
+        if (pending.HasValue)
+            return new CustomerCopyResult(false, "PLEASE LAYAWAY ALL ITEMS BEFORE TAKE COPY");
+
+        // Mirror legacy UpdateCustomerCopyStatus
+        const string updateSql = @"
+            UPDATE TempItemDet SET IsCustomerCopy = 1
+            WHERE LocationID = @LocationID
+              AND DocumentID IN (1,2,3,4,6,8,9) AND BillTypeID != 4
+              AND LocationIDBilling = @LocationIDBilling
+              AND TableID = @TableID AND TicketID = @TicketID
+              AND IsCustomerCopy = 0";
+
+        await conn.ExecuteAsync(updateSql, new
+        {
+            r.LocationID, r.LocationIDBilling, r.TableID, r.TicketID
+        });
+
+        return new CustomerCopyResult(true, string.Empty);
     }
 }

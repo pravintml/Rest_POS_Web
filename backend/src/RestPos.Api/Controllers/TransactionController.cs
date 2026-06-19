@@ -144,6 +144,24 @@ public class TransactionController(TransactionAppService txSvc) : ControllerBase
         return ok ? Ok() : BadRequest(new { error = "Failed to send KOT" });
     }
 
+    // ── POST: layaway (mark all unprinted items ready for remote printing, then go home) ───
+    [HttpPost("layaway")]
+    public async Task<IActionResult> Layaway([FromBody] LayawayRequest req)
+    {
+        var hasData = await txSvc.LayawayAsync(req with { LocationID = LocationId });
+        if (!hasData) return BadRequest(new { error = "NO DATA TO LAYAWAY" });
+        return Ok();
+    }
+
+    // ── POST: customer copy (check pending layaway, then mark IsCustomerCopy=1) ───────────
+    [HttpPost("customer-copy")]
+    public async Task<IActionResult> CustomerCopy([FromBody] CustomerCopyRequest req)
+    {
+        var result = await txSvc.CustomerCopyAsync(req with { LocationID = LocationId });
+        if (!result.Success) return BadRequest(new { error = result.Error });
+        return Ok();
+    }
+
     // ── POST: service charge ─────────────────────────────────────────────
     [HttpPost("service-charge")]
     public async Task<IActionResult> ServiceCharge([FromBody] ServiceChargeRequest req)

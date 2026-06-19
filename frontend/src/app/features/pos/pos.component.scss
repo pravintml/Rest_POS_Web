@@ -439,8 +439,9 @@ $header-h: 52px;
     background: rgba(34,197,94,0.12);
     color: #4ade80;
     border: 1px solid rgba(34,197,94,0.25);
-    cursor: not-allowed;
-    pointer-events: none;
+    &:hover:not([disabled]) { background: rgba(34,197,94,0.22); }
+    &:active:not([disabled]) { transform: scale(0.98); }
+    &[disabled] { opacity: 0.3; cursor: not-allowed; }
   }
 
   &.ob-layaway {
@@ -449,8 +450,9 @@ $header-h: 52px;
     background: rgba(249,115,22,0.12);
     color: #fb923c;
     border: 1px solid rgba(249,115,22,0.25);
-    cursor: not-allowed;
-    pointer-events: none;
+    &:hover:not([disabled]) { background: rgba(249,115,22,0.25); }
+    &:active:not([disabled]) { transform: scale(0.98); }
+    &[disabled] { opacity: 0.3; cursor: not-allowed; }
   }
 }
 
@@ -1269,6 +1271,36 @@ $header-h: 52px;
       color: $text-muted;
       font-weight: 400;
       margin-left: 0.5rem;
+    }
+
+    .sel-back-inline {
+      margin-left: auto;
+      flex-shrink: 0;
+      background: rgba($accent, 0.08);
+      border: 1px solid rgba($accent, 0.25);
+      border-radius: 20px;
+      color: rgba($accent, 0.75);
+      padding: 0.35rem 1rem 0.35rem 0.75rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+
+      i { font-size: 0.75rem; }
+      i.pi-arrow-left { color: rgba($accent, 0.55); }
+      i.pi-map-marker { color: rgba($accent, 0.9); font-size: 0.8rem; }
+
+      &:hover {
+        background: rgba($accent, 0.18);
+        border-color: rgba($accent, 0.55);
+        color: $accent;
+        box-shadow: 0 0 10px rgba($accent, 0.2);
+        i { color: $accent; }
+      }
     }
   }
 }

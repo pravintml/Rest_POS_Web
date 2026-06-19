@@ -186,6 +186,20 @@ export interface SendKotRequest {
   orderTerminalID: number;
 }
 
+export interface LayawayRequest {
+  locationID: number;
+  locationIDBilling: number;
+  tableID: number;
+  ticketID: number;
+}
+
+export interface CustomerCopyRequest {
+  locationID: number;
+  locationIDBilling: number;
+  tableID: number;
+  ticketID: number;
+}
+
 export interface DecreaseQtyRequest {
   locationID: number;
   locationIDBilling: number;

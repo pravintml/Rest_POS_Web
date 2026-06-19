@@ -56,6 +56,12 @@ public class TransactionAppService(ITransactionRepository txRepo)
     public Task<bool> SendKotAsync(SendKotRequest req) =>
         txRepo.SendKotAsync(req);
 
+    public Task<bool> LayawayAsync(LayawayRequest req) =>
+        txRepo.LayawayAsync(req);
+
+    public Task<CustomerCopyResult> CustomerCopyAsync(CustomerCopyRequest req) =>
+        txRepo.CustomerCopyAsync(req);
+
     public Task<bool> ServiceChargeUpdateAsync(ServiceChargeRequest req) =>
         txRepo.ServiceChargeUpdateAsync(req);
 

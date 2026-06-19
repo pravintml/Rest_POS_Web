@@ -8,7 +8,7 @@ import {
   DecreaseQtyRequest, SplitQtyRequest, DiscountRemoveRequest,
   ItemCommentRequest, TagRequest, PacksRequest, MobileNoRequest,
   MoveItemsRequest, MergeTableRequest, ChangeTableRequest, ShiftEndRequest,
-  ServiceChargeUpdateRequest
+  ServiceChargeUpdateRequest, LayawayRequest, CustomerCopyRequest
 } from '../models/transaction.models';
 
 const BASE = `${environment.apiUrl}/api/transaction`;
@@ -66,6 +66,14 @@ export class TransactionService {
 
   sendKot(req: SendKotRequest) {
     return this.http.post<void>(`${BASE}/send-kot`, req);
+  }
+
+  layaway(req: LayawayRequest) {
+    return this.http.post<void>(`${BASE}/layaway`, req);
+  }
+
+  customerCopy(req: CustomerCopyRequest) {
+    return this.http.post<void>(`${BASE}/customer-copy`, req);
   }
 
   decreaseQty(req: DecreaseQtyRequest) {

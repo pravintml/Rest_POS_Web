@@ -24,7 +24,7 @@ import { MasterService } from '../../core/services/master.service';
 
 import { SysConfig } from '../../core/models/config.models';
 import { ProductMaster } from '../../core/models/product.models';
-import { OrderLineDto, ItemCommentRequest, ServiceChargeUpdateRequest } from '../../core/models/transaction.models';
+import { OrderLineDto, ItemCommentRequest, ServiceChargeUpdateRequest, LayawayRequest, CustomerCopyRequest } from '../../core/models/transaction.models';
 import { PayTypeDto, PaymentLineDto, SuspendListItem } from '../../core/models/payment.models';
 import {
   BillingLocation, TableInfo, Steward, TicketInfo
@@ -176,6 +176,7 @@ export class PosComponent implements OnInit, OnDestroy {
   showPayment = false;
   showSuspend = false;
   showReceipt = false;
+  isCopyReceipt = false;
   suspendMode: SuspendDialogMode = 'suspend';
   discountDialogIsPercentage = true;
 
@@ -1010,6 +1011,64 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
+  // Layaway
+  // ─────────────────────────────────────────────────────────────────────────
+  layaway() {
+    const sess = this.session()!;
+    this.busy.set(true);
+    this.txSvc.layaway({
+      locationID: sess.locationId,
+      locationIDBilling: this.locationIDBilling(),
+      tableID: this.tableID(),
+      ticketID: this.ticketID()
+    } as LayawayRequest).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.orderItems.set([]);
+        this.billTotal.set(0);
+        this.goToTables();
+      },
+      error: (err) => {
+        this.busy.set(false);
+        const msg = err?.error?.error ?? 'Layaway failed';
+        this.toast('warn', 'Layaway', msg);
+      }
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Customer copy receipt (COPY button)
+  // ─────────────────────────────────────────────────────────────────────────
+  copyReceipt() {
+    const sess = this.session()!;
+    const cfg = this.config()!;
+    this.busy.set(true);
+    this.txSvc.customerCopy({
+      locationID: sess.locationId,
+      locationIDBilling: this.locationIDBilling(),
+      tableID: this.tableID(),
+      ticketID: this.ticketID()
+    } as CustomerCopyRequest).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.prepareReceipt('', cfg);
+        // Override label to CUSTOMER COPY with no payment lines
+        const cur = this.receiptData();
+        if (cur) {
+          this.receiptData.set({ ...cur, label: 'CUSTOMER COPY', payments: [], totalPaid: 0, change: 0 });
+        }
+        this.isCopyReceipt = true;
+        this.showReceipt = true;
+      },
+      error: (err) => {
+        this.busy.set(false);
+        const msg = err?.error?.error ?? 'Copy failed';
+        this.toast('warn', 'Copy', msg);
+      }
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   // Suspend / Recall
   // ─────────────────────────────────────────────────────────────────────────
   openSuspend() {
@@ -1185,8 +1244,12 @@ export class PosComponent implements OnInit, OnDestroy {
     this.showReceipt = false;
     this.receiptData.set(null);
     this.paymentLines.set([]);
-    // Return to table selection after completing a bill
-    this.resetToTables();
+    if (this.isCopyReceipt) {
+      this.isCopyReceipt = false;
+      // Stay on POS — customer copy doesn't end the order
+    } else {
+      this.resetToTables();
+    }
   }
 
   /** Clear the active bill-view context when navigating back to a selection screen. */

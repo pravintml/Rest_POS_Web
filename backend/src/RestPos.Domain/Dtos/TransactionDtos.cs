@@ -283,6 +283,20 @@ public record SendKotRequest(
     long OrderTerminalID
 );
 
+public record LayawayRequest(
+    int LocationID,
+    int LocationIDBilling,
+    int TableID,
+    long TicketID
+);
+
+public record CustomerCopyRequest(
+    int LocationID,
+    int LocationIDBilling,
+    int TableID,
+    long TicketID
+);
+
 public record ServiceChargeRequest(
     int LocationID,
     string Receipt,
@@ -335,6 +349,7 @@ public record BillSummaryDto(
 public record SaveInvoiceResult(bool Success, string ReceiptNo, string Error = "");
 public record SuspendResult(bool Success, string SuspendNo, string Error = "");
 public record RecallResult(bool Success, string Error = "");
+public record CustomerCopyResult(bool Success, string Error = "");
 
 public record SuspendListItem(
     string SuspendNo,

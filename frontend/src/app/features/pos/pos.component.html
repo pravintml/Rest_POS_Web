@@ -97,6 +97,11 @@
           <div class="sel-title">
             <i class="pi pi-table"></i> Select Table
             <span class="sel-subtitle">{{ locationIDBillingName() }}</span>
+            <button class="sel-back-btn sel-back-inline" (click)="selectionStage.set('location')">
+              <i class="pi pi-arrow-left"></i>
+              <i class="pi pi-map-marker"></i>
+              Locations
+            </button>
           </div>
           <div class="sel-grid tables-grid">
             @for (tbl of tables(); track tbl.tableID) {
@@ -104,11 +109,6 @@
                 {{ tbl.tableName }}
               </button>
             }
-          </div>
-          <div class="sel-back">
-            <button class="sel-back-btn" (click)="selectionStage.set('location')">
-              <i class="pi pi-arrow-left"></i> Back to Locations
-            </button>
           </div>
         </div>
       }
@@ -368,13 +368,19 @@
 
       <div class="order-btns">
         <div class="order-btns-row">
-          <div class="ob-btn ob-copy">COPY</div>
+          <button class="ob-btn ob-copy" (click)="copyReceipt()"
+            [disabled]="orderItems().length === 0 || busy()">
+            <i class="pi pi-copy"></i> COPY
+          </button>
           <button class="ob-btn ob-payment"
             (click)="openPayment()" [disabled]="orderItems().length === 0 || busy()">
             <i class="pi pi-credit-card"></i> PAYMENT
           </button>
         </div>
-        <div class="ob-btn ob-layaway">LAYAWAY</div>
+        <button class="ob-btn ob-layaway" (click)="layaway()"
+          [disabled]="orderItems().length === 0 || busy()">
+          LAYAWAY
+        </button>
       </div>
 
     </section>
