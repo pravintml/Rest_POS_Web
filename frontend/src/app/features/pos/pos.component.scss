@@ -60,11 +60,18 @@ $header-h: 52px;
     }
 
     .location-name {
+      --icv: #74b9ff;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
       font-size: 0.8rem;
-      color: $text-muted;
+      font-weight: 600;
+      color: color-mix(in srgb, var(--icv) 70%, #ffffff);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+
+      i { color: var(--icv); font-size: 0.9rem; }
     }
   }
 
@@ -350,6 +357,7 @@ $header-h: 52px;
 }
 
 .act-btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -357,9 +365,9 @@ $header-h: 52px;
   min-height: 42px;
   padding: 6px;
   border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 5px;
-  background: rgba(255,255,255,0.04);
-  color: $text-muted;
+  border-radius: 7px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.025) 100%);
+  color: rgba(232,232,240,0.82);
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.3px;
@@ -367,31 +375,97 @@ $header-h: 52px;
   text-align: center;
   line-height: 1.2;
   cursor: pointer;
-  transition: background 0.1s, color 0.1s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.05);
+  transition: background 0.12s, color 0.12s, border-color 0.12s, box-shadow 0.12s, transform 0.08s;
   -webkit-tap-highlight-color: transparent;
 
   &.half { flex: 1; font-size: 1rem; }
 
   i { font-size: 0.8rem; flex-shrink: 0; }
 
-  &:hover:not([disabled]) { background: rgba(255,255,255,0.1); color: $text; }
-  &:active:not([disabled]) { transform: scale(0.95); }
+  &:hover:not([disabled]) {
+    background: linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%);
+    border-color: rgba(255,255,255,0.22);
+    color: $text;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  &:active:not([disabled]) {
+    transform: translateY(0) scale(0.97);
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.4);
+  }
   &[disabled] { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
 
-  &.danger        { background: rgba(230,57,70,0.15); color: #ff6b6b; border-color: rgba(230,57,70,0.3);
-                    &:hover:not([disabled]) { background: rgba(230,57,70,0.25); } }
-  &.danger-outline{ color: #ff9999; border-color: rgba(230,57,70,0.25);
-                    &:hover:not([disabled]) { background: rgba(230,57,70,0.1); } }
-  &.kot           { color: #ffd166; border-color: rgba(255,209,102,0.3);
-                    &:hover:not([disabled]) { background: rgba(255,209,102,0.1); } }
-  &.dim           { opacity: 0.25; cursor: not-allowed; pointer-events: none; }
-  &.more-btn  { background: rgba(139,0,0,0.35); color: #ffaaaa; border-color: rgba(200,0,0,0.4);
-               cursor: pointer; pointer-events: auto;
-               &:hover { background: rgba(139,0,0,0.5); } }
-  &.less-btn  { grid-column: 1 / -1; background: rgba(255,255,255,0.07); color: $text;
-               border-color: rgba(255,255,255,0.15);
-               &:hover { background: rgba(255,255,255,0.12); } }
-  &.active-level { background: rgba(99,102,241,0.2); color: #a5b4fc; border-color: rgba(99,102,241,0.4); }
+  // ── Colored variants (gradient fills, accent text + matching glow) ──
+  &.danger {
+    background: linear-gradient(180deg, rgba(230,57,70,0.24), rgba(230,57,70,0.12));
+    color: #ff7b7b; border-color: rgba(230,57,70,0.4);
+    &:hover:not([disabled]) {
+      background: linear-gradient(180deg, rgba(230,57,70,0.36), rgba(230,57,70,0.2));
+      border-color: rgba(230,57,70,0.6); color: #ff9d9d;
+      box-shadow: 0 3px 10px rgba(230,57,70,0.28);
+    }
+  }
+  &.danger-outline {
+    color: #ff9999; border-color: rgba(230,57,70,0.35);
+    background: linear-gradient(180deg, rgba(230,57,70,0.08), rgba(230,57,70,0.02));
+    &:hover:not([disabled]) {
+      background: linear-gradient(180deg, rgba(230,57,70,0.18), rgba(230,57,70,0.08));
+      border-color: rgba(230,57,70,0.5); color: #ffb3b3;
+    }
+  }
+  &.kot {
+    color: #ffd166; border-color: rgba(255,209,102,0.35);
+    background: linear-gradient(180deg, rgba(255,209,102,0.12), rgba(255,209,102,0.04));
+    &:hover:not([disabled]) { background: linear-gradient(180deg, rgba(255,209,102,0.2), rgba(255,209,102,0.08)); }
+  }
+  &.dim { opacity: 0.25; cursor: not-allowed; pointer-events: none; box-shadow: none; }
+  &.more-btn {
+    background: linear-gradient(180deg, rgba(190,30,40,0.5), rgba(139,0,0,0.4));
+    color: #ffc4c4; border-color: rgba(220,40,50,0.5);
+    cursor: pointer; pointer-events: auto;
+    &:hover { background: linear-gradient(180deg, rgba(210,40,50,0.65), rgba(160,10,10,0.5)); color: #ffd6d6;
+              box-shadow: 0 3px 12px rgba(200,0,0,0.35); }
+  }
+  &.less-btn {
+    grid-column: 1 / -1; color: $text;
+    background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.04));
+    border-color: rgba(255,255,255,0.18);
+    &:hover { background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.07)); }
+  }
+  &.active-level {
+    background: linear-gradient(180deg, rgba(99,102,241,0.32), rgba(99,102,241,0.16));
+    color: #c7d2fe; border-color: rgba(99,102,241,0.5);
+    box-shadow: 0 0 0 1px rgba(99,102,241,0.25), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  // ── Navigation buttons (Billing Location / Tables) — distinct backgrounds ──
+  &.nav-btn {
+    min-height: 46px;
+    font-size: 0.72rem;
+    letter-spacing: 0.4px;
+    i { font-size: 0.95rem; }
+  }
+  &.loc-nav {
+    background: linear-gradient(135deg, rgba(116,185,255,0.34) 0%, rgba(99,102,241,0.22) 100%);
+    color: #d7e8ff; border-color: rgba(116,185,255,0.5);
+    i { color: #9ecbff; }
+    &:hover:not([disabled]) {
+      background: linear-gradient(135deg, rgba(116,185,255,0.5) 0%, rgba(99,102,241,0.34) 100%);
+      border-color: rgba(116,185,255,0.75); color: #ffffff;
+      box-shadow: 0 4px 14px rgba(116,185,255,0.3);
+    }
+  }
+  &.tbl-nav {
+    background: linear-gradient(135deg, rgba(45,198,83,0.32) 0%, rgba(20,160,120,0.22) 100%);
+    color: #cdf5d8; border-color: rgba(45,198,83,0.5);
+    i { color: #7ee2a0; }
+    &:hover:not([disabled]) {
+      background: linear-gradient(135deg, rgba(45,198,83,0.46) 0%, rgba(20,160,120,0.34) 100%);
+      border-color: rgba(45,198,83,0.75); color: #ffffff;
+      box-shadow: 0 4px 14px rgba(45,198,83,0.3);
+    }
+  }
 }
 
 // ── Order bottom buttons (PAYMENT / COPY / LAYAWAY) ──
@@ -1266,22 +1340,23 @@ $header-h: 52px;
 
     i { color: $accent; }
 
-    // Current billing-location badge (mirrors the location-grid blue accent)
+    // Current billing-location badge (tinted with the location's own color)
     .sel-subtitle {
+      --icv: #74b9ff;
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
       font-size: 0.78rem;
       font-weight: 600;
       letter-spacing: 0.3px;
-      color: #74b9ff;
-      background: rgba(116, 185, 255, 0.12);
-      border: 1px solid rgba(116, 185, 255, 0.3);
+      color: color-mix(in srgb, var(--icv) 78%, #ffffff);
+      background: color-mix(in srgb, var(--icv) 14%, transparent);
+      border: 1px solid color-mix(in srgb, var(--icv) 32%, transparent);
       border-radius: 20px;
       padding: 0.22rem 0.75rem;
       margin-left: 0.6rem;
 
-      i { color: #74b9ff; font-size: 0.8rem; }
+      i { color: var(--icv); font-size: 0.8rem; }
     }
 
     .sel-back-inline {
@@ -1324,6 +1399,50 @@ $header-h: 52px;
 
   &.tables-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
   &.steward-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  &.location-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 1rem; }
+}
+
+// ── Location selection — richer, centered panel header ─────────────────
+.location-panel {
+  width: min(92%, 760px);
+
+  .sel-head {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid $border;
+
+    .sel-head-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 46px;
+      height: 46px;
+      flex-shrink: 0;
+      border-radius: 12px;
+      background: rgba(116, 185, 255, 0.12);
+      border: 1px solid rgba(116, 185, 255, 0.28);
+
+      i { font-size: 1.4rem; color: #74b9ff; }
+    }
+
+    .sel-head-text { display: flex; flex-direction: column; gap: 0.15rem; }
+
+    .sel-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .sel-head-sub {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: $text-muted;
+    }
+  }
 }
 
 .sel-btn {
@@ -1355,28 +1474,112 @@ $header-h: 52px;
   &:active { transform: scale(0.96); }
 
   &.location-btn {
+    --icv: #74b9ff; // per-card icon color (set inline via [style.--icv])
     position: relative;
+    flex-direction: column;
+    gap: 0.7rem;
+    padding: 1.5rem 1rem 1.35rem;
+    min-height: 132px;
+    // Big button is the solid color; darkened toward the bottom for depth.
+    background:
+      linear-gradient(160deg,
+        color-mix(in srgb, var(--icv) 78%, #10101a) 0%,
+        color-mix(in srgb, var(--icv) 52%, #10101a) 100%);
+    border-color: color-mix(in srgb, var(--icv) 45%, #000000);
+    color: #ffffff;
+    overflow: hidden;
 
-    i { color: #74b9ff; }
+    // soft top sheen
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 45%;
+      border-radius: 10px 10px 0 0;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent);
+      pointer-events: none;
+    }
 
-    // Currently-selected billing location — clear glowing highlight + check badge
+    // Small box is a neutral (near-white) chip; the icon carries the color.
+    .loc-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      transition: all 0.18s;
+
+      i { font-size: 1.5rem; color: var(--icv); }
+    }
+
+    .loc-name {
+      font-size: 0.98rem;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      line-height: 1.25;
+      color: #ffffff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    }
+
+    &:hover {
+      border-color: color-mix(in srgb, var(--icv) 50%, #ffffff);
+      box-shadow:
+        0 10px 26px rgba(0, 0, 0, 0.4),
+        0 0 28px color-mix(in srgb, var(--icv) 45%, transparent);
+      transform: translateY(-3px);
+
+      .loc-icon {
+        background: #ffffff;
+        border-color: #ffffff;
+        transform: scale(1.05);
+      }
+    }
+
+    // Currently-selected billing location — brighter fill + white glow ring
     &.active-location {
-      background: rgba(116, 185, 255, 0.14);
-      border-color: rgba(116, 185, 255, 0.55);
-      box-shadow: 0 0 0 1px rgba(116, 185, 255, 0.35), 0 0 16px rgba(116, 185, 255, 0.18);
-      color: #cfe6ff;
+      background:
+        linear-gradient(160deg,
+          color-mix(in srgb, var(--icv) 92%, #10101a) 0%,
+          color-mix(in srgb, var(--icv) 68%, #10101a) 100%);
+      border-color: #ffffff;
+      box-shadow:
+        0 0 0 2px rgba(255, 255, 255, 0.55),
+        0 0 26px color-mix(in srgb, var(--icv) 55%, transparent);
+      color: #ffffff;
+      overflow: visible; // let the Current pill float above the top edge
 
-      i.pi-building { color: #9ecbff; }
+      .loc-icon {
+        background: #ffffff;
+        border-color: #ffffff;
+        i { color: var(--icv); }
+      }
 
       .loc-current-badge {
         position: absolute;
-        top: 6px;
+        top: -10px;
         right: 8px;
-        font-size: 0.95rem;
-        color: #74b9ff;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        color: #10101a;
+        background: #ffffff;
+        border: 2px solid var(--icv);
+        border-radius: 20px;
+        padding: 0.16rem 0.5rem;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+
+        i { font-size: 0.7rem; color: #10101a; }
       }
 
-      &:hover { background: rgba(116, 185, 255, 0.2); transform: translateY(-2px); }
+      &:hover { transform: translateY(-3px); }
     }
   }
   &.table-btn {

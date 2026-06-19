@@ -287,6 +287,40 @@ export class PosComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Picks a PrimeIcon for a billing location based on keywords in its name.
+   * Locations are data-driven, so this maps common restaurant area names to a
+   * recognisable glyph and falls back to a generic building icon.
+   */
+  locationIcon(name: string): string {
+    const n = (name || '').toLowerCase();
+    if (/take\s*away|takeaway|to\s*go|parcel/.test(n)) return 'pi-shopping-bag';
+    if (/delivery|deliver/.test(n)) return 'pi-truck';
+    if (/vip|lounge|exclusive|premium/.test(n)) return 'pi-crown';
+    if (/family|kids|group/.test(n)) return 'pi-users';
+    if (/restaurant|dining|dine|hall|main/.test(n)) return 'pi-shop';
+    if (/room|suite|cabin/.test(n)) return 'pi-key';
+    if (/bar|pub|drink/.test(n)) return 'pi-sparkles';
+    if (/garden|outdoor|terrace|roof/.test(n)) return 'pi-sun';
+    if (/counter|cashier|pos/.test(n)) return 'pi-desktop';
+    return 'pi-building';
+  }
+
+  /** Accent color for a billing location's icon, matched to its type. */
+  locationColor(name: string): string {
+    const n = (name || '').toLowerCase();
+    if (/take\s*away|takeaway|to\s*go|parcel/.test(n)) return '#2dc653'; // green
+    if (/delivery|deliver/.test(n)) return '#ff9f43';                    // orange
+    if (/vip|lounge|exclusive|premium/.test(n)) return '#f1c40f';        // gold
+    if (/family|kids|group/.test(n)) return '#4dd4c4';                   // teal
+    if (/restaurant|dining|dine|hall|main/.test(n)) return '#74b9ff';    // blue
+    if (/room|suite|cabin/.test(n)) return '#a78bfa';                    // purple
+    if (/bar|pub|drink/.test(n)) return '#ff6b9d';                       // pink
+    if (/garden|outdoor|terrace|roof/.test(n)) return '#9ccc65';         // leaf
+    if (/counter|cashier|pos/.test(n)) return '#5dade2';                 // sky
+    return '#74b9ff';                                                    // default blue
+  }
+
   onLocationSelected(loc: BillingLocation) {
     this.locationIDBilling.set(loc.locationId);
     this.locationIDBillingName.set(loc.name);

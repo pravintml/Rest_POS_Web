@@ -24,7 +24,9 @@
   <header class="pos-header">
     <div class="header-left">
       <span class="pos-brand"><i class="pi pi-shopping-cart"></i> SoftVinz Rest POS</span>
-      <span class="location-name">{{ locationName() }}</span>
+      <span class="location-name" [style.--icv]="locationColor(locationIDBillingName() || locationName())">
+        <i class="pi" [ngClass]="locationIcon(locationIDBillingName() || locationName())"></i>{{ locationName() }}
+      </span>
       @if (tableName()) {
         <span class="table-badge"><i class="pi pi-table"></i> {{ tableName() }}</span>
       }
@@ -78,17 +80,24 @@
 
       <!-- Location Selection -->
       @if (selectionStage() === 'location') {
-        <div class="sel-panel">
-          <div class="sel-title"><i class="pi pi-map-marker"></i> Select Billing Location</div>
-          <div class="sel-grid">
+        <div class="sel-panel location-panel">
+          <div class="sel-head">
+            <div class="sel-head-icon"><i class="pi pi-map-marker"></i></div>
+            <div class="sel-head-text">
+              <div class="sel-title">Select Billing Location</div>
+              <div class="sel-head-sub">Choose where this bill will be raised</div>
+            </div>
+          </div>
+          <div class="sel-grid location-grid">
             @for (loc of billingLocations(); track loc.locationId) {
               <button class="sel-btn location-btn"
+                [style.--icv]="locationColor(loc.name)"
                 [class.active-location]="loc.locationId === locationIDBilling()"
                 (click)="onLocationSelected(loc)">
-                <i class="pi pi-building"></i>
-                <span>{{ loc.name }}</span>
+                <span class="loc-icon"><i class="pi" [ngClass]="locationIcon(loc.name)"></i></span>
+                <span class="loc-name">{{ loc.name }}</span>
                 @if (loc.locationId === locationIDBilling()) {
-                  <i class="pi pi-check-circle loc-current-badge"></i>
+                  <span class="loc-current-badge"><i class="pi pi-check-circle"></i> Current</span>
                 }
               </button>
             }
@@ -101,7 +110,9 @@
         <div class="sel-panel">
           <div class="sel-title">
             <i class="pi pi-table"></i> Select Table
-            <span class="sel-subtitle"><i class="pi pi-map-marker"></i>{{ locationIDBillingName() }}</span>
+            <span class="sel-subtitle" [style.--icv]="locationColor(locationIDBillingName())">
+              <i class="pi" [ngClass]="locationIcon(locationIDBillingName())"></i>{{ locationIDBillingName() }}
+            </span>
             <button class="sel-back-inline" (click)="selectionStage.set('location')">
               <i class="pi pi-arrow-left"></i>
               <i class="pi pi-map-marker"></i>
@@ -190,6 +201,12 @@
       <div class="action-grid">
         @if (!showMore()) {
           <!-- ── Main panel ── -->
+          <button class="act-btn nav-btn loc-nav" (click)="goToLocations()" [disabled]="busy()">
+            <i class="pi pi-map-marker"></i> BILLING LOCATION
+          </button>
+          <button class="act-btn nav-btn tbl-nav" (click)="goToTables()" [disabled]="busy()">
+            <i class="pi pi-table"></i> TABLES
+          </button>
           <button class="act-btn" (click)="newBill()" [disabled]="busy()">NEW</button>
           <div class="act-btn dim">CUSTOMER</div>
           <div class="act-btn-row">
@@ -208,12 +225,6 @@
           <button class="act-btn danger-outline"
             (click)="voidBill()" [disabled]="orderItems().length === 0 || busy()">
             CLEAR
-          </button>
-          <button class="act-btn" (click)="goToTables()" [disabled]="busy()">
-            TABLES
-          </button>
-          <button class="act-btn" (click)="goToLocations()" [disabled]="busy()">
-            BILLING LOCATION
           </button>
           <button class="act-btn" (click)="openChangeTable()" [disabled]="orderItems().length === 0 || busy()">
             CHANGE TABLE
