@@ -27,7 +27,7 @@ import { ProductMaster } from '../../core/models/product.models';
 import { OrderLineDto, ItemCommentRequest, ServiceChargeUpdateRequest, LayawayRequest, CustomerCopyRequest } from '../../core/models/transaction.models';
 import { PayTypeDto, PaymentLineDto, SuspendListItem } from '../../core/models/payment.models';
 import {
-  BillingLocation, TableInfo, Steward, TicketInfo
+  BillingLocation, TableInfo, TableStatus, Steward, TicketInfo
 } from '../../core/models/master.models';
 
 import { DiscountDialogComponent, DiscountResult } from './dialogs/discount-dialog.component';
@@ -79,6 +79,8 @@ export class PosComponent implements OnInit, OnDestroy {
   readonly configLoading = signal(true);
   readonly billLoading = signal(false);
   readonly busy = signal(false);
+
+  readonly TableStatus = TableStatus;
 
   // ── Selection flow ───────────────────────────────────────────────────────
   readonly selectionStage = signal<SelectionStage>('location');
@@ -302,7 +304,7 @@ export class PosComponent implements OnInit, OnDestroy {
     });
   }
 
-  private loadTables(billingLocationId: number) {
+  private loadTables(billingLocationId: number, autoSelect = true) {
     this.selectionLoading.set(true);
     this.masterSvc.getTables(billingLocationId).subscribe({
       next: list => {
@@ -310,7 +312,9 @@ export class PosComponent implements OnInit, OnDestroy {
         this.selectionLoading.set(false);
         // Auto-select if only 1 table AND only 1 billing location (mirrors legacy).
         // Never auto-select in change/merge mode — the user must pick the target.
-        if (list.length === 1 && this.billingLocations().length === 1 && !this.changeTableMode() && !this.mergeMode()) {
+        // Explicit navigation (TABLES button / post-sale reset) passes autoSelect=false
+        // so the user always sees the (refreshed) table screen.
+        if (autoSelect && list.length === 1 && this.billingLocations().length === 1 && !this.changeTableMode() && !this.mergeMode()) {
           this.onTableSelected(list[0]);
         } else {
           this.selectionStage.set('tables');
@@ -1264,13 +1268,13 @@ export class PosComponent implements OnInit, OnDestroy {
 
   resetToTables() {
     this.clearBillContext();
-    this.selectionStage.set('tables');
+    this.loadTables(this.locationIDBilling(), false);
   }
 
   /** Order-screen button: go to the table-selection screen for the current billing location. */
   goToTables() {
     this.clearBillContext();
-    this.selectionStage.set('tables');
+    this.loadTables(this.locationIDBilling(), false);
   }
 
   /** Order-screen button: go to the billing-location selection screen. */

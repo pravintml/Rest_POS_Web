@@ -7,7 +7,7 @@ namespace RestPos.Data.Repositories;
 public interface IMasterRepository
 {
     Task<IEnumerable<BillingLocationDto>> GetBillingLocationsAsync(int unitNo);
-    Task<IEnumerable<TableInfoDto>> GetTablesAsync(int billingLocationId);
+    Task<IEnumerable<TableInfoDto>> GetTablesAsync(int locationId, int billingLocationId);
     Task<IEnumerable<StewardDto>> GetStewardsAsync();
     Task<IEnumerable<ItemLayer1Dto>> GetItemLayer1Async();
     Task<IEnumerable<ItemLayer2Dto>> GetItemLayer2Async(long layer1Id);
@@ -30,16 +30,56 @@ public class MasterRepository(IDbConnectionFactory db) : IMasterRepository
         return await conn.QueryAsync<BillingLocationDto>(sql, new { UnitNo = unitNo });
     }
 
-    // Mirrors FrmPOS.LoadTables / MasterFileService.GetTableDetailsForTouch
-    public async Task<IEnumerable<TableInfoDto>> GetTablesAsync(int billingLocationId)
+    // Mirrors FrmPOS.LoadTables + RefreshTables() coloring logic:
+    //   Available=0, Occupied(1 ticket)=1, MultiOccupied(2+)=2, Printed(all KOT sent)=3
+    public async Task<IEnumerable<TableInfoDto>> GetTablesAsync(int locationId, int billingLocationId)
     {
         using var conn = db.Create();
         conn.Open();
         const string sql = @"
-            SELECT TableID, TableName
-            FROM TableDetails WHERE LocationID=@LocationID
-            ORDER BY TableCode";
-        return await conn.QueryAsync<TableInfoDto>(sql, new { LocationID = billingLocationId });
+            SELECT
+                td.TableID,
+                td.TableName,
+                CASE
+                    WHEN pr.TableID IS NOT NULL       THEN 3
+                    WHEN ISNULL(occ.Tickets, 0) > 1   THEN 2
+                    WHEN ISNULL(occ.Tickets, 0) = 1   THEN 1
+                    ELSE 0
+                END AS Status,
+                ISNULL(occ.Tickets, 0)      AS Tickets,
+                ISNULL(occ.StewardName, '') AS StewardName
+            FROM TableDetails td
+            LEFT JOIN (
+                SELECT TableID,
+                       COUNT(DISTINCT TicketID)      AS Tickets,
+                       MAX(ISNULL(StewardName, ''))  AS StewardName
+                FROM TempItemDet
+                WHERE LocationID          = @LocationID
+                  AND LocationIDBilling   = @LocationIDBilling
+                  AND DocumentID IN (1,2,3,4,10)
+                GROUP BY TableID
+            ) occ ON td.TableID = occ.TableID
+            LEFT JOIN (
+                SELECT DISTINCT TableID
+                FROM TempItemDet
+                WHERE LocationID          = @LocationID
+                  AND LocationIDBilling   = @LocationIDBilling
+                  AND DocumentID IN (1,2,3,4)
+                  AND TicketID NOT IN (
+                      SELECT TicketID FROM TempItemDet
+                      WHERE LocationID          = @LocationID
+                        AND LocationIDBilling   = @LocationIDBilling
+                        AND DocumentID IN (1,2,3,4)
+                        AND IsCustomerCopy      = 0
+                  )
+            ) pr ON td.TableID = pr.TableID
+            WHERE td.LocationID = @LocationIDBilling
+            ORDER BY td.TableCode";
+        return await conn.QueryAsync<TableInfoDto>(sql, new
+        {
+            LocationID         = locationId,
+            LocationIDBilling  = billingLocationId
+        });
     }
 
     // Mirrors MasterFileService.GetStewardForTouch

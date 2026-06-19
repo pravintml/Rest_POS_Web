@@ -22,7 +22,7 @@ public class MasterController(IMasterRepository masterRepo) : ControllerBase
     [HttpGet("tables")]
     public async Task<IActionResult> GetTables([FromQuery] int billingLocationId)
     {
-        var list = await masterRepo.GetTablesAsync(billingLocationId);
+        var list = await masterRepo.GetTablesAsync(LocationId, billingLocationId);
         return Ok(list);
     }
 

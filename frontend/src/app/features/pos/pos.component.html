@@ -82,9 +82,14 @@
           <div class="sel-title"><i class="pi pi-map-marker"></i> Select Billing Location</div>
           <div class="sel-grid">
             @for (loc of billingLocations(); track loc.locationId) {
-              <button class="sel-btn location-btn" (click)="onLocationSelected(loc)">
+              <button class="sel-btn location-btn"
+                [class.active-location]="loc.locationId === locationIDBilling()"
+                (click)="onLocationSelected(loc)">
                 <i class="pi pi-building"></i>
                 <span>{{ loc.name }}</span>
+                @if (loc.locationId === locationIDBilling()) {
+                  <i class="pi pi-check-circle loc-current-badge"></i>
+                }
               </button>
             }
           </div>
@@ -96,8 +101,8 @@
         <div class="sel-panel">
           <div class="sel-title">
             <i class="pi pi-table"></i> Select Table
-            <span class="sel-subtitle">{{ locationIDBillingName() }}</span>
-            <button class="sel-back-btn sel-back-inline" (click)="selectionStage.set('location')">
+            <span class="sel-subtitle"><i class="pi pi-map-marker"></i>{{ locationIDBillingName() }}</span>
+            <button class="sel-back-inline" (click)="selectionStage.set('location')">
               <i class="pi pi-arrow-left"></i>
               <i class="pi pi-map-marker"></i>
               Locations
@@ -105,8 +110,21 @@
           </div>
           <div class="sel-grid tables-grid">
             @for (tbl of tables(); track tbl.tableID) {
-              <button class="sel-btn table-btn" (click)="onTableSelected(tbl)">
-                {{ tbl.tableName }}
+              <button class="sel-btn table-btn"
+                [class.tbl-occupied]="tbl.status === TableStatus.Occupied"
+                [class.tbl-multi]="tbl.status === TableStatus.MultiOccupied"
+                [class.tbl-printed]="tbl.status === TableStatus.Printed"
+                (click)="onTableSelected(tbl)">
+                <span class="tbl-name">{{ tbl.tableName }}</span>
+                @if (tbl.status !== TableStatus.Available) {
+                  <span class="tbl-status-dot"></span>
+                }
+                @if (tbl.status === TableStatus.MultiOccupied) {
+                  <span class="tbl-ticket-badge">×{{ tbl.tickets }}</span>
+                }
+                @if (tbl.stewardName && tbl.status !== TableStatus.Available) {
+                  <span class="tbl-steward">{{ tbl.stewardName }}</span>
+                }
               </button>
             }
           </div>

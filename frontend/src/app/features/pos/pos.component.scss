@@ -1266,40 +1266,52 @@ $header-h: 52px;
 
     i { color: $accent; }
 
+    // Current billing-location badge (mirrors the location-grid blue accent)
     .sel-subtitle {
-      font-size: 0.85rem;
-      color: $text-muted;
-      font-weight: 400;
-      margin-left: 0.5rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      color: #74b9ff;
+      background: rgba(116, 185, 255, 0.12);
+      border: 1px solid rgba(116, 185, 255, 0.3);
+      border-radius: 20px;
+      padding: 0.22rem 0.75rem;
+      margin-left: 0.6rem;
+
+      i { color: #74b9ff; font-size: 0.8rem; }
     }
 
     .sel-back-inline {
       margin-left: auto;
       flex-shrink: 0;
-      background: rgba($accent, 0.08);
-      border: 1px solid rgba($accent, 0.25);
+      background: rgba($accent, 0.1);
+      border: 1px solid rgba($accent, 0.3);
       border-radius: 20px;
-      color: rgba($accent, 0.75);
-      padding: 0.35rem 1rem 0.35rem 0.75rem;
-      font-size: 0.78rem;
+      color: #fff;
+      padding: 0.4rem 1rem 0.4rem 0.8rem;
+      font-size: 0.8rem;
       font-weight: 600;
-      letter-spacing: 0.3px;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 0.35rem;
-      transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+      gap: 0.4rem;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 
-      i { font-size: 0.75rem; }
-      i.pi-arrow-left { color: rgba($accent, 0.55); }
-      i.pi-map-marker { color: rgba($accent, 0.9); font-size: 0.8rem; }
+      // override the parent .sel-title i rule
+      i {
+        color: $accent !important;
+        font-size: 0.85rem;
+      }
+
+      .pi-map-marker { font-size: 0.95rem !important; }
 
       &:hover {
-        background: rgba($accent, 0.18);
-        border-color: rgba($accent, 0.55);
-        color: $accent;
-        box-shadow: 0 0 10px rgba($accent, 0.2);
-        i { color: $accent; }
+        background: rgba($accent, 0.22);
+        border-color: rgba($accent, 0.6);
+        box-shadow: 0 0 12px rgba($accent, 0.25);
       }
     }
   }
@@ -1342,8 +1354,96 @@ $header-h: 52px;
 
   &:active { transform: scale(0.96); }
 
-  &.location-btn i { color: #74b9ff; }
-  &.table-btn { font-size: 0.85rem; }
+  &.location-btn {
+    position: relative;
+
+    i { color: #74b9ff; }
+
+    // Currently-selected billing location — clear glowing highlight + check badge
+    &.active-location {
+      background: rgba(116, 185, 255, 0.14);
+      border-color: rgba(116, 185, 255, 0.55);
+      box-shadow: 0 0 0 1px rgba(116, 185, 255, 0.35), 0 0 16px rgba(116, 185, 255, 0.18);
+      color: #cfe6ff;
+
+      i.pi-building { color: #9ecbff; }
+
+      .loc-current-badge {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        font-size: 0.95rem;
+        color: #74b9ff;
+      }
+
+      &:hover { background: rgba(116, 185, 255, 0.2); transform: translateY(-2px); }
+    }
+  }
+  &.table-btn {
+    font-size: 0.85rem;
+    position: relative;
+    overflow: visible;
+
+    .tbl-name { font-weight: 700; font-size: 0.9rem; line-height: 1.2; }
+
+    .tbl-steward {
+      font-size: 0.68rem;
+      font-weight: 500;
+      opacity: 0.85;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tbl-status-dot {
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.7;
+    }
+
+    .tbl-ticket-badge {
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      font-size: 0.62rem;
+      font-weight: 700;
+      background: rgba(0,0,0,0.35);
+      border-radius: 4px;
+      padding: 1px 4px;
+      line-height: 1.4;
+    }
+  }
+
+  // ── Table status states (mirrors legacy RefreshTables colours) ────────────
+  // Occupied: 1 ticket — LimeGreen
+  &.tbl-occupied {
+    background: rgba(45, 198, 83, 0.12);
+    border-color: rgba(45, 198, 83, 0.45);
+    color: #2dc653;
+    &:hover { background: rgba(45, 198, 83, 0.22); border-color: rgba(45, 198, 83, 0.7); }
+  }
+
+  // MultiOccupied: 2+ tickets — Gold/Goldenrod
+  &.tbl-multi {
+    background: rgba(255, 190, 11, 0.12);
+    border-color: rgba(255, 190, 11, 0.45);
+    color: #f9ca24;
+    &:hover { background: rgba(255, 190, 11, 0.22); border-color: rgba(255, 190, 11, 0.7); }
+  }
+
+  // Printed: all items KOT-sent — Aqua/Cyan
+  &.tbl-printed {
+    background: rgba(129, 236, 236, 0.1);
+    border-color: rgba(129, 236, 236, 0.4);
+    color: #81ecec;
+    &:hover { background: rgba(129, 236, 236, 0.2); border-color: rgba(129, 236, 236, 0.65); }
+  }
   &.steward-btn i { color: #81ecec; }
 
   &.new-ticket-btn {
