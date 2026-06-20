@@ -45,3 +45,11 @@ export interface ItemCommentOption {
   commentID: number;
   comment: string;
 }
+
+export interface DiscountType {
+  dId: number;
+  descrip: string;
+  pfx: string;
+  maxDiscount: number;
+  isActive: boolean;
+}

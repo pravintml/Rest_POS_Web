@@ -189,11 +189,7 @@ export type PaymentCompleteEvent = PaymentLineDto[];
     <div class="pay-notes-area">
       @for (n of notesList; track n) {
         <button class="note-btn" [style.--nc]="noteColor(n)" (click)="onNoteClick(n)" [disabled]="busy()">
-          <span class="note-ghost" aria-hidden="true">{{ n | number:'1.0-0' }}</span>
-          <span class="note-top">
-            <i class="pi pi-money-bill"></i>
-            <span class="note-currency">Rs.</span>
-          </span>
+          <span class="note-currency"><i class="pi pi-money-bill"></i> Rs.</span>
           <span class="note-amount">{{ n | number:'1.0-0' }}</span>
         </button>
       }
@@ -481,28 +477,21 @@ export type PaymentCompleteEvent = PaymentLineDto[];
     .note-btn {
       --nc: #16a34a;
       width: 100%; height: 100%; min-height: 5rem;
-      padding: 0.55rem 0.7rem;
+      padding: 0.5rem;
       border: 1.5px solid rgba(255,255,255,0.07); border-radius: 12px;
       background: linear-gradient(135deg, color-mix(in srgb, var(--nc) 16%, #0a0e18) 0%, color-mix(in srgb, var(--nc) 6%, #060810) 100%);
       cursor: pointer;
-      display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0.15rem;
-      position: relative; overflow: hidden;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem;
       transition: border-color 0.15s, box-shadow 0.15s, background 0.15s, transform 0.12s;
     }
-    .note-ghost {
-      position: absolute; right: -0.3rem; bottom: -0.6rem;
-      font-size: 3rem; font-weight: 900; line-height: 1;
-      color: var(--nc); opacity: 0.12;
-      pointer-events: none; font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+    .note-currency {
+      display: flex; align-items: center; gap: 0.25rem;
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em;
+      color: var(--nc); opacity: 0.85;
     }
-    .note-top {
-      display: flex; align-items: center; gap: 0.3rem;
-      font-size: 0.68rem; color: var(--nc); opacity: 0.85;
-    }
-    .note-top i { font-size: 0.72rem; }
-    .note-currency { font-weight: 700; letter-spacing: 0.04em; }
+    .note-currency i { font-size: 0.75rem; }
     .note-amount {
-      font-size: 1.15rem; font-weight: 800; color: #e8e8f0;
+      font-size: 1.45rem; font-weight: 800; color: #e8e8f0;
       font-variant-numeric: tabular-nums; letter-spacing: -0.01em; line-height: 1;
     }
     .note-btn:hover:not(:disabled) {
@@ -512,7 +501,7 @@ export type PaymentCompleteEvent = PaymentLineDto[];
       transform: translateY(-1px);
     }
     .note-btn:hover:not(:disabled) .note-amount { color: #fff; }
-    .note-btn:hover:not(:disabled) .note-top { opacity: 1; }
+    .note-btn:hover:not(:disabled) .note-currency { opacity: 1; }
     .note-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
     /* ── Right: Numpad ───────────────────────────────────────────── */

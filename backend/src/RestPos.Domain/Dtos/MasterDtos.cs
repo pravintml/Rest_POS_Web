@@ -13,3 +13,4 @@ public record ItemLayer2Dto(long ItemLayer2ID, string ItemLayer2Name);
 public record TicketDto(long TicketID, decimal Amount, int StewardID, string StewardName);
 public record TouchProductDto(long ProductID, string ProductName);
 public record ItemCommentOptionDto(int CommentID, string Comment);
+public record DiscountTypeDto(int DId, string Descrip, string Pfx, decimal MaxDiscount, bool IsActive);

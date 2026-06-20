@@ -541,17 +541,17 @@
               <i class="pi pi-undo"></i>
               DEFAULT
             </button>
-            @for (l of [1,2,3,4,5]; track l) {
-              <button class="disc-level-btn" [class.active]="discountLevelId() === l"
-                      (click)="selectDiscountLevel(l)">
-                <span class="level-num">{{ l }}</span>
-                LEVEL {{ l }}
+            @for (dt of discountTypes(); track dt.dId) {
+              <button class="disc-level-btn" [class.active]="discountLevelId() === dt.dId"
+                      (click)="selectDiscountLevel(dt.dId)">
+                <span class="level-num">{{ dt.pfx || dt.dId }}</span>
+                {{ dt.descrip }}
               </button>
             }
           </div>
           <div class="disc-level-hint">
             <i class="pi pi-info-circle"></i>
-            Type 1–5 on the numpad and press DISC LEVEL to set directly
+            Type the level number on the numpad and press DISC LEVEL to set directly
           </div>
         </div>
       </div>
@@ -570,6 +570,7 @@
   [billTotal]="displayTotal()"
   [initialLevel]="discountLevelId()"
   [defaultIsPercentage]="discountDialogIsPercentage"
+  [discountTypes]="discountTypes()"
   (applied)="onDiscountApplied($event)" />
 
 <app-payment-dialog

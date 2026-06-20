@@ -14,6 +14,7 @@ public interface IMasterRepository
     Task<IEnumerable<TicketDto>> GetAvailableTicketsAsync(int locationId, int billingLocationId, int tableId);
     Task<long> AllocateTicketAsync(int locationId);
     Task<IEnumerable<ItemCommentOptionDto>> GetItemCommentsAsync();
+    Task<IEnumerable<DiscountTypeDto>> GetDiscountTypesAsync();
 }
 
 public class MasterRepository(IDbConnectionFactory db) : IMasterRepository
@@ -98,6 +99,16 @@ public class MasterRepository(IDbConnectionFactory db) : IMasterRepository
         conn.Open();
         const string sql = "SELECT CommentID, Comment FROM ItemComment ORDER BY CommentID";
         return await conn.QueryAsync<ItemCommentOptionDto>(sql);
+    }
+
+    public async Task<IEnumerable<DiscountTypeDto>> GetDiscountTypesAsync()
+    {
+        using var conn = db.Create();
+        conn.Open();
+        const string sql = @"
+            SELECT DId, Descrip, Pfx, MaxDiscount, IsActive
+            FROM DiscountType WHERE IsActive=1 ORDER BY DId";
+        return await conn.QueryAsync<DiscountTypeDto>(sql);
     }
 
     // Mirrors MasterFileService.GetItemLayer1

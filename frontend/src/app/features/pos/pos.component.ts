@@ -27,7 +27,7 @@ import { ProductMaster } from '../../core/models/product.models';
 import { OrderLineDto, ItemCommentRequest, ServiceChargeUpdateRequest, LayawayRequest, CustomerCopyRequest } from '../../core/models/transaction.models';
 import { PayTypeDto, PaymentLineDto, SuspendListItem } from '../../core/models/payment.models';
 import {
-  BillingLocation, TableInfo, TableStatus, Steward, TicketInfo
+  BillingLocation, TableInfo, TableStatus, Steward, TicketInfo, DiscountType
 } from '../../core/models/master.models';
 
 import { DiscountDialogComponent, DiscountResult } from './dialogs/discount-dialog.component';
@@ -207,12 +207,15 @@ export class PosComponent implements OnInit, OnDestroy {
   // ── Reprint dialog ────────────────────────────────────────────────────────
   showReprintDialog = signal(false);
 
-  // ── Discount level (1-5 = line discount tier, 0 = default) ───────────────
+  // ── Discount level — loaded from DiscountType table ──────────────────────
+  discountTypes = signal<DiscountType[]>([]);
   discountLevelId = signal(0);
   showDiscountLevelPicker = signal(false);
   readonly discountLevelLabel = computed(() => {
     const lvl = this.discountLevelId();
-    return lvl === 0 ? 'DISC LEVEL' : `DISC LVL ${lvl}`;
+    if (lvl === 0) return 'DISC LEVEL';
+    const type = this.discountTypes().find(t => t.dId === lvl);
+    return type ? (type.pfx || type.descrip) : `DISC LVL ${lvl}`;
   });
 
   // ── Merge table mode (reuses the location/table/ticket selection flow) ──────
@@ -1246,6 +1249,10 @@ export class PosComponent implements OnInit, OnDestroy {
       next: notes => this.paymentNotes.set(notes.map(n => n.note)),
       error: () => {}
     });
+    this.masterSvc.getDiscountTypes().subscribe({
+      next: types => this.discountTypes.set(types),
+      error: () => {}
+    });
   }
 
   openPayment() {
@@ -1531,10 +1538,11 @@ export class PosComponent implements OnInit, OnDestroy {
       return;
     }
     const val = parseInt(this.numpadBuffer(), 10);
-    if (val >= 1 && val <= 5) {
+    const type = this.discountTypes().find(t => t.dId === val);
+    if (type) {
       this.discountLevelId.set(val);
       this.numpadClear();
-      this.toast('info', 'Discount Level', `Level ${val} active`, 1500);
+      this.toast('info', 'Discount Level', `${type.descrip} active`, 1500);
     } else {
       this.showDiscountLevelPicker.set(true);
     }
@@ -1543,7 +1551,12 @@ export class PosComponent implements OnInit, OnDestroy {
   selectDiscountLevel(level: number) {
     this.discountLevelId.set(level);
     this.showDiscountLevelPicker.set(false);
-    this.toast('info', 'Discount Level', level === 0 ? 'Reset to default' : `Level ${level} active`, 1500);
+    if (level === 0) {
+      this.toast('info', 'Discount Level', 'Reset to default', 1500);
+    } else {
+      const type = this.discountTypes().find(t => t.dId === level);
+      this.toast('info', 'Discount Level', type ? `${type.descrip} active` : `Level ${level} active`, 1500);
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────

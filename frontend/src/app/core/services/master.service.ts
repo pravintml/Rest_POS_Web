@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import {
   BillingLocation, TableInfo, Steward,
-  ItemLayer1, ItemLayer2, TicketInfo, ItemCommentOption
+  ItemLayer1, ItemLayer2, TicketInfo, ItemCommentOption, DiscountType
 } from '../models/master.models';
 
 @Injectable({ providedIn: 'root' })
@@ -47,5 +47,9 @@ export class MasterService {
 
   allocateTicket() {
     return this.http.post<{ ticketId: number }>(`${this.base}/new-ticket`, {});
+  }
+
+  getDiscountTypes() {
+    return this.http.get<DiscountType[]>(`${this.base}/discount-types`);
   }
 }

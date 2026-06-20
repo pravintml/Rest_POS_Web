@@ -6,6 +6,7 @@ import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { OrderLineDto } from '../../../core/models/transaction.models';
+import { DiscountType } from '../../../core/models/master.models';
 
 export interface DiscountResult {
   rowNo: number;
@@ -70,15 +71,18 @@ export interface DiscountResult {
         </div>
 
         <!-- ── Discount level ──────────────────────────────── -->
-        <div class="disc-levels">
-          <span class="level-label">Level:</span>
-          <div class="level-buttons">
-            @for (l of [1,2,3,4,5]; track l) {
-              <button class="level-btn" [class.active]="discountID === l"
-                      (click)="discountID = l">{{ l }}</button>
-            }
+        @if (discountTypes.length > 0) {
+          <div class="disc-levels">
+            <span class="level-label">Level:</span>
+            <div class="level-buttons">
+              @for (dt of discountTypes; track dt.dId) {
+                <button class="level-btn" [class.active]="discountID === dt.dId"
+                        (click)="discountID = dt.dId"
+                        [title]="dt.descrip">{{ dt.pfx || dt.dId }}</button>
+              }
+            </div>
           </div>
-        </div>
+        }
 
       </div>
 
@@ -155,6 +159,7 @@ export class DiscountDialogComponent implements OnChanges {
   @Input() initialLevel = 1;
   /** Controls which tab opens when the dialog is shown. */
   @Input() defaultIsPercentage = true;
+  @Input() discountTypes: DiscountType[] = [];
 
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() applied = new EventEmitter<DiscountResult>();
@@ -170,7 +175,8 @@ export class DiscountDialogComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['visible']?.currentValue === true) {
-      this.discountID = this.initialLevel > 0 ? this.initialLevel : 1;
+      const fallback = this.discountTypes[0]?.dId ?? 1;
+      this.discountID = this.initialLevel > 0 ? this.initialLevel : fallback;
       this.isPercentage = this.defaultIsPercentage;
       this.discountValue = null;
     }

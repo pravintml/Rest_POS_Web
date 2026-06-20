@@ -68,4 +68,11 @@ public class MasterController(IMasterRepository masterRepo) : ControllerBase
         var ticketId = await masterRepo.AllocateTicketAsync(LocationId);
         return Ok(new { ticketId });
     }
+
+    [HttpGet("discount-types")]
+    public async Task<IActionResult> GetDiscountTypes()
+    {
+        var list = await masterRepo.GetDiscountTypesAsync();
+        return Ok(list);
+    }
 }
