@@ -25,9 +25,28 @@ import { InvoiceSummaryDto } from '../../../core/models/transaction.models';
         <div class="rdlg-list">
           @for (inv of invoices(); track inv.receipt) {
             <button class="rdlg-row" (click)="select(inv)">
-              <span class="rdlg-receipt">{{ inv.receipt }}</span>
-              <span class="rdlg-meta">{{ inv.cashier }} · {{ inv.recDate }}</span>
-              <span class="rdlg-amount">{{ inv.netAmount | number:'1.2-2' }}</span>
+              <div class="rdlg-row-top">
+                <span class="rdlg-receipt">{{ inv.receipt }}</span>
+                <span class="rdlg-amount">{{ inv.netAmount | number:'1.2-2' }}</span>
+              </div>
+              <div class="rdlg-row-mid">
+                <span class="rdlg-label">START</span>
+                <span class="rdlg-val">{{ inv.startTime }}</span>
+                <span class="rdlg-sep">·</span>
+                <span class="rdlg-val rdlg-cashier">{{ inv.cashier }}</span>
+              </div>
+              <div class="rdlg-row-bot">
+                @if (inv.mobileNo) {
+                  <span class="rdlg-chip"><span class="rdlg-label">MOBILE #</span> {{ inv.mobileNo }}</span>
+                }
+                @if (inv.customer) {
+                  <span class="rdlg-chip"><span class="rdlg-label">CUSTOMER</span> {{ inv.customer }}</span>
+                }
+                <span class="rdlg-chip"><span class="rdlg-label">PACKS</span> {{ inv.packs }}</span>
+                @if (inv.tagNo) {
+                  <span class="rdlg-chip"><span class="rdlg-label">TAG #</span> {{ inv.tagNo }}</span>
+                }
+              </div>
             </button>
           }
         </div>
@@ -80,7 +99,7 @@ import { InvoiceSummaryDto } from '../../../core/models/transaction.models';
       scrollbar-color: rgba(255,255,255,0.08) transparent;
     }
     .rdlg-row {
-      width: 100%; display: flex; align-items: center; gap: 0.75rem;
+      width: 100%; display: flex; flex-direction: column; gap: 0.25rem;
       padding: 0.75rem 1.25rem;
       background: none; border: none; border-bottom: 1px solid rgba(255,255,255,0.05);
       color: #e8e8f0; cursor: pointer; text-align: left;
@@ -88,9 +107,16 @@ import { InvoiceSummaryDto } from '../../../core/models/transaction.models';
       &:hover { background: rgba(167,139,250,0.1); }
       &:active { background: rgba(167,139,250,0.18); }
     }
-    .rdlg-receipt { font-weight: 700; font-size: 0.9rem; min-width: 110px; color: #a78bfa; }
-    .rdlg-meta { flex: 1; font-size: 0.75rem; color: rgba(232,232,240,0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rdlg-row-top { display: flex; align-items: center; justify-content: space-between; }
+    .rdlg-row-mid { display: flex; align-items: center; gap: 0.4rem; }
+    .rdlg-row-bot { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.1rem; }
+    .rdlg-receipt { font-weight: 700; font-size: 0.9rem; color: #a78bfa; }
     .rdlg-amount { font-weight: 700; font-size: 0.9rem; color: #4dd4c4; white-space: nowrap; }
+    .rdlg-label { font-size: 0.68rem; color: rgba(232,232,240,0.4); text-transform: uppercase; letter-spacing: 0.04em; }
+    .rdlg-val { font-size: 0.78rem; color: rgba(232,232,240,0.65); }
+    .rdlg-cashier { color: rgba(232,232,240,0.85); font-weight: 600; }
+    .rdlg-sep { color: rgba(232,232,240,0.2); font-size: 0.75rem; }
+    .rdlg-chip { display: flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; color: rgba(232,232,240,0.7); background: rgba(255,255,255,0.05); border-radius: 4px; padding: 1px 6px; }
   `]
 })
 export class ReprintDialogComponent implements OnChanges {
