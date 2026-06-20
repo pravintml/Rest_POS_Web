@@ -36,6 +36,8 @@ import { SuspendDialogComponent, SuspendDialogMode } from './dialogs/suspend-dia
 import { ReceiptComponent, ReceiptData } from './receipt/receipt.component';
 import { ProductBrowserComponent } from './browser/product-browser.component';
 import { MenuReportDialogComponent } from './dialogs/menu-report-dialog.component';
+import { ReprintDialogComponent } from './dialogs/reprint-dialog.component';
+import { InvoiceSummaryDto } from '../../core/models/transaction.models';
 
 type SelectionStage = 'location' | 'tables' | 'tickets' | 'steward' | 'pos';
 
@@ -56,7 +58,8 @@ type BillDisplayRow =
     ConfirmDialogModule,
     DiscountDialogComponent, PaymentDialogComponent,
     SuspendDialogComponent, ReceiptComponent,
-    ProductBrowserComponent, MenuReportDialogComponent
+    ProductBrowserComponent, MenuReportDialogComponent,
+    ReprintDialogComponent
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './pos.component.html',
@@ -179,6 +182,7 @@ export class PosComponent implements OnInit, OnDestroy {
   showSuspend = false;
   showReceipt = false;
   isCopyReceipt = false;
+  isReprintReceipt = false;
   suspendMode: SuspendDialogMode = 'suspend';
   discountDialogIsPercentage = true;
 
@@ -192,6 +196,9 @@ export class PosComponent implements OnInit, OnDestroy {
   // ── Menu / reports dialog ─────────────────────────────────────────────────
   showMenuDialog = signal(false);
   openMenu() { this.showMenuDialog.set(true); }
+
+  // ── Reprint dialog ────────────────────────────────────────────────────────
+  showReprintDialog = signal(false);
 
   // ── Discount level (1-5 = line discount tier, 0 = default) ───────────────
   discountLevelId = signal(0);
@@ -908,14 +915,66 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Reprint last invoice
+  // Reprint invoice — opens picker dialog, loads saved detail, shows receipt
   // ─────────────────────────────────────────────────────────────────────────
   reprintInvoice() {
-    if (this.receiptData()) {
-      this.showReceipt = true;
-    } else {
-      this.toast('warn', 'Reprint', 'No recent invoice to reprint');
-    }
+    this.showReprintDialog.set(true);
+    this.showMore.set(false);
+  }
+
+  onReprintSelected(inv: InvoiceSummaryDto) {
+    this.showReprintDialog.set(false);
+    const cfg = this.config();
+    if (!cfg) return;
+    this.busy.set(true);
+    this.txSvc.getSavedInvoiceDetail(this.locationIDBilling(), inv.receipt).subscribe({
+      next: detail => {
+        this.busy.set(false);
+        const headerLines = [cfg.locationName, cfg.head1, cfg.head2, cfg.head3, cfg.head4, cfg.head5]
+          .filter(h => h?.trim());
+        const footerLines = [cfg.tail1, cfg.tail2, cfg.tail3, cfg.tail4, cfg.tail5]
+          .filter(t => t?.trim());
+        const payments = detail.payments.map(p => ({
+          payTypeID: p.payTypeID, descrip: p.descrip,
+          amount: p.amount, refNo: p.refNo, rowNo: 0
+        }));
+        const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+        const saleItems = detail.items.filter(i => i.documentID === 1 || i.documentID === 3);
+        this.receiptData.set({
+          receiptNo: inv.receipt,
+          zNo: cfg.zno,
+          date: inv.recDate.split(' ')[0],
+          time: inv.recDate.split(' ')[1],
+          cashier: detail.cashier || inv.cashier,
+          unitNo: inv.unitNo,
+          type: this.locationIDBillingName() || undefined,
+          label: 'REPRINTED',
+          headerLines,
+          footerLines,
+          items: detail.items,
+          payments,
+          billTotal: inv.netAmount,
+          totalPaid,
+          change: 0,
+          decimalPoints: this.decimalPlaces(),
+          soldQty: saleItems.length,
+          pieces: saleItems.reduce((s, i) => s + i.qty, 0),
+          totalDiscount: detail.items
+            .filter(i => i.documentID === 6)
+            .reduce((s, i) => s + i.nett, 0)
+        });
+        this.isReprintReceipt = true;
+        this.showReceipt = true;
+      },
+      error: () => {
+        this.busy.set(false);
+        this.toast('error', 'Error', 'Could not load invoice detail');
+      }
+    });
+  }
+
+  onReprintClosed() {
+    this.showReprintDialog.set(false);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1282,9 +1341,10 @@ export class PosComponent implements OnInit, OnDestroy {
     this.showReceipt = false;
     this.receiptData.set(null);
     this.paymentLines.set([]);
-    if (this.isCopyReceipt) {
+    if (this.isCopyReceipt || this.isReprintReceipt) {
       this.isCopyReceipt = false;
-      // Stay on POS — customer copy doesn't end the order
+      this.isReprintReceipt = false;
+      // Stay on the current screen — customer copy / reprint don't end the order
     } else {
       this.resetToTables();
     }

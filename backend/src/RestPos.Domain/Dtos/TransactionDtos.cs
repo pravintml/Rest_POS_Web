@@ -358,3 +358,29 @@ public record SuspendListItem(
     string SuspendTime,
     int TransStatus
 );
+
+public record InvoiceSummaryDto(
+    string Receipt,
+    decimal NetAmount,
+    string Cashier,
+    int UnitNo,
+    int TableID,
+    long TicketID,
+    string RecDate
+);
+
+public record SavedPaymentLineDto(
+    int PayTypeID,
+    string Descrip,
+    decimal Amount,
+    string RefNo
+);
+
+public record SavedInvoiceDto(
+    IEnumerable<OrderLineDto> Items,
+    IEnumerable<SavedPaymentLineDto> Payments,
+    string Cashier,
+    string RecDate,
+    int TableID,
+    long TicketID
+);

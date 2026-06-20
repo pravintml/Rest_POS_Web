@@ -41,6 +41,9 @@ public interface ITransactionRepository
     Task<bool> ShiftEndAsync(ShiftEndRequest req);
     Task<bool> LayawayAsync(LayawayRequest req);
     Task<CustomerCopyResult> CustomerCopyAsync(CustomerCopyRequest req);
+
+    Task<IEnumerable<InvoiceSummaryDto>> GetInvoiceListAsync(int locationID, int locationIDBilling, int unitNo);
+    Task<SavedInvoiceDto> GetSavedInvoiceDetailAsync(int locationID, int locationIDBilling, int unitNo, string receipt);
 }
 
 public class TransactionRepository(IDbConnectionFactory db) : ITransactionRepository
@@ -610,5 +613,116 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
         });
 
         return new CustomerCopyResult(true, string.Empty);
+    }
+
+    public async Task<IEnumerable<InvoiceSummaryDto>> GetInvoiceListAsync(int locationID, int locationIDBilling, int unitNo)
+    {
+        using var conn = db.Create();
+        conn.Open();
+        const string sql = @"
+            SELECT Receipt,
+                   SUM(CASE WHEN DocumentID IN (1,3,10) THEN Nett
+                            WHEN DocumentID IN (2,4,6)  THEN -Nett
+                            ELSE 0 END) AS NetAmount,
+                   MAX(Cashier)  AS Cashier,
+                   UnitNo, TableID, TicketID,
+                   CONVERT(varchar(20), MAX(RecDate), 120) AS RecDate
+            FROM TransactionDet
+            WHERE LocationID          = @LocationID
+              AND LocationIDBilling   = @LocationIDBilling
+              AND UnitNo              = @UnitNo
+              AND IsDayend            = 0
+              AND BillTypeID          = 1
+              AND SaleTypeID          IN (1,2)
+              AND TransStatus         = 1
+            GROUP BY Receipt, UnitNo, TableID, TicketID
+            ORDER BY Receipt DESC";
+
+        return await conn.QueryAsync<InvoiceSummaryDto>(sql,
+            new { LocationID = locationID, LocationIDBilling = locationIDBilling, UnitNo = unitNo });
+    }
+
+    public async Task<SavedInvoiceDto> GetSavedInvoiceDetailAsync(int locationID, int locationIDBilling, int unitNo, string receipt)
+    {
+        using var conn = db.Create();
+        conn.Open();
+
+        const string itemSql = @"
+            SELECT ProductID, ProductCode,
+                   CASE WHEN DocumentID = 6
+                        THEN ISNULL((SELECT TOP 1 Descrip FROM DiscountType WHERE DId = SDID), 'DISCOUNT')
+                        ELSE Descrip
+                   END Descrip,
+                   Price, Qty, Amount,
+                   ISNULL(IDiscount1,0) AS Discount,
+                   CASE WHEN Price = 0 THEN 0
+                        ELSE ROUND(ISNULL(IDiscount1,0) / Price * 100, 2) END AS DiscountPct,
+                   Nett, DocumentID, RowNo,
+                   ISNULL(TaxAmount,0) TaxAmount, ISNULL(IsTax,0) IsTax,
+                   ISNULL(TaxPercentage,0) TaxPercentage,
+                   ISNULL(IsPrinted,0) IsPrinted,
+                   ISNULL(ItemComment,'') ItemComment,
+                   ISNULL(TagNo,'') TagNo,
+                   ISNULL(Cashier,'') Cashier,
+                   CONVERT(varchar(20), MAX(RecDate) OVER (PARTITION BY Receipt), 120) AS RecDate,
+                   TableID, TicketID
+            FROM TransactionDet
+            WHERE LocationID        = @LocationID
+              AND LocationIDBilling = @LocationIDBilling
+              AND UnitNo            = @UnitNo
+              AND Receipt           = @Receipt
+              AND IsDayend          = 0
+              AND BillTypeID        = 1
+              AND DocumentID        IN (1,2,3,4,6,9,10)
+            ORDER BY RowNo";
+
+        const string paySql = @"
+            SELECT ISNULL(pd.PayTypeID,0) PayTypeID,
+                   ISNULL(pd.Descrip,'') Descrip,
+                   ISNULL(CASE WHEN pd.Amount > pd.Balance THEN pd.Balance ELSE pd.Amount END, 0) Amount,
+                   ISNULL(pd.RefNo,'') RefNo
+            FROM PaymentDet pd
+            WHERE pd.LocationID        = @LocationID
+              AND pd.LocationIDBilling = @LocationIDBilling
+              AND pd.UnitNo            = @UnitNo
+              AND pd.Receipt           = @Receipt
+              AND pd.IsDayEnd          = 0
+              AND pd.BillTypeID        = 1
+            ORDER BY pd.RowNo";
+
+        var p = new { LocationID = locationID, LocationIDBilling = locationIDBilling, UnitNo = unitNo, Receipt = receipt };
+        var rows    = (await conn.QueryAsync<dynamic>(itemSql, p)).ToList();
+        var payments = await conn.QueryAsync<SavedPaymentLineDto>(paySql, p);
+
+        string cashier = "", recDate = "";
+        int tableID = 0; long ticketID = 0;
+        var items = new List<OrderLineDto>();
+        foreach (var r in rows)
+        {
+            if (cashier == "") cashier = ((string)r.Cashier).Trim();
+            if (recDate == "") recDate = ((string)r.RecDate).Trim();
+            if (tableID == 0)  tableID  = (int)r.TableID;
+            if (ticketID == 0) ticketID = (long)r.TicketID;
+            items.Add(new OrderLineDto(
+                ProductID:    (long)r.ProductID,
+                ProductCode:  ((string)r.ProductCode).Trim(),
+                Descrip:      ((string)r.Descrip).Trim(),
+                Price:        (decimal)r.Price,
+                Qty:          (decimal)r.Qty,
+                Discount:     (decimal)r.Discount,
+                DiscountPct:  (decimal)r.DiscountPct,
+                Nett:         (decimal)r.Nett,
+                DocumentID:   (int)r.DocumentID,
+                RowNo:        (long)r.RowNo,
+                IsPrinted:    (bool)r.IsPrinted,
+                TaxAmount:    (decimal)r.TaxAmount,
+                IsTax:        (bool)r.IsTax,
+                TaxPercentage:(decimal)r.TaxPercentage,
+                ItemComment:  ((string)r.ItemComment).Trim(),
+                TagNo:        ((string)r.TagNo).Trim()
+            ));
+        }
+
+        return new SavedInvoiceDto(items, payments, cashier, recDate, tableID, ticketID);
     }
 }

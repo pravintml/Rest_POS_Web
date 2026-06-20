@@ -18,6 +18,32 @@ export interface OrderLineDto {
   tagNo: string;
 }
 
+export interface InvoiceSummaryDto {
+  receipt: string;
+  netAmount: number;
+  cashier: string;
+  unitNo: number;
+  tableID: number;
+  ticketID: number;
+  recDate: string;
+}
+
+export interface SavedPaymentLineDto {
+  payTypeID: number;
+  descrip: string;
+  amount: number;
+  refNo: string;
+}
+
+export interface SavedInvoiceDto {
+  items: OrderLineDto[];
+  payments: SavedPaymentLineDto[];
+  cashier: string;
+  recDate: string;
+  tableID: number;
+  ticketID: number;
+}
+
 export interface BillSummaryDto {
   items: OrderLineDto[];
   billTotal: number;

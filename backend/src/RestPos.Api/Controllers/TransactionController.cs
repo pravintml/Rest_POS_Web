@@ -270,5 +270,22 @@ public class TransactionController(TransactionAppService txSvc) : ControllerBase
         return ok ? Ok() : BadRequest(new { error = "Failed to end shift" });
     }
 
+    // ── GET: list invoices for current shift (reprint picker) ───────────────
+    [HttpGet("invoices")]
+    public async Task<IActionResult> GetInvoiceList([FromQuery] int locationIDBilling)
+    {
+        var list = await txSvc.GetInvoiceListAsync(LocationId, locationIDBilling, UnitNo);
+        return Ok(list);
+    }
+
+    // ── GET: saved invoice detail by receipt no (for reprinting) ────────────
+    [HttpGet("invoice-detail")]
+    public async Task<IActionResult> GetSavedInvoiceDetail(
+        [FromQuery] int locationIDBilling, [FromQuery] string receipt)
+    {
+        var detail = await txSvc.GetSavedInvoiceDetailAsync(LocationId, locationIDBilling, UnitNo, receipt);
+        return Ok(detail);
+    }
+
     public record SaveStatusRequest(string Receipt, int TransStatus, string DocNo = "");
 }

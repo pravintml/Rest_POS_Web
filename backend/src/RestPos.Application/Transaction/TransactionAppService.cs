@@ -107,4 +107,10 @@ public class TransactionAppService(ITransactionRepository txRepo)
 
     public Task<bool> ShiftEndAsync(ShiftEndRequest req) =>
         txRepo.ShiftEndAsync(req);
+
+    public Task<IEnumerable<InvoiceSummaryDto>> GetInvoiceListAsync(int locationID, int locationIDBilling, int unitNo) =>
+        txRepo.GetInvoiceListAsync(locationID, locationIDBilling, unitNo);
+
+    public Task<SavedInvoiceDto> GetSavedInvoiceDetailAsync(int locationID, int locationIDBilling, int unitNo, string receipt) =>
+        txRepo.GetSavedInvoiceDetailAsync(locationID, locationIDBilling, unitNo, receipt);
 }

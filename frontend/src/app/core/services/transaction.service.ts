@@ -8,7 +8,8 @@ import {
   DecreaseQtyRequest, SplitQtyRequest, DiscountRemoveRequest,
   ItemCommentRequest, TagRequest, PacksRequest, MobileNoRequest,
   MoveItemsRequest, MergeTableRequest, ChangeTableRequest, ShiftEndRequest,
-  ServiceChargeUpdateRequest, LayawayRequest, CustomerCopyRequest
+  ServiceChargeUpdateRequest, LayawayRequest, CustomerCopyRequest,
+  InvoiceSummaryDto, SavedInvoiceDto
 } from '../models/transaction.models';
 
 const BASE = `${environment.apiUrl}/api/transaction`;
@@ -152,5 +153,17 @@ export class TransactionService {
 
   shiftEnd(req: ShiftEndRequest) {
     return this.http.post<void>(`${BASE}/shift-end`, req);
+  }
+
+  getInvoiceList(locationIDBilling: number) {
+    const params = new HttpParams().set('locationIDBilling', locationIDBilling);
+    return this.http.get<InvoiceSummaryDto[]>(`${BASE}/invoices`, { params });
+  }
+
+  getSavedInvoiceDetail(locationIDBilling: number, receipt: string) {
+    const params = new HttpParams()
+      .set('locationIDBilling', locationIDBilling)
+      .set('receipt', receipt);
+    return this.http.get<SavedInvoiceDto>(`${BASE}/invoice-detail`, { params });
   }
 }
