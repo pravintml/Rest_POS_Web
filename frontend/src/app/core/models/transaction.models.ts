@@ -60,6 +60,7 @@ export interface BillSummaryDto {
   pieces: number;
   soldQty: number;
   packs: number;
+  customer: string;
 }
 
 // ── Request bodies ────────────────────────────────────────────────────────────

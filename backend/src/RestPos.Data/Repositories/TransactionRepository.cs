@@ -294,7 +294,8 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
                    ISNULL(TagNo,'') TagNo,
                    ISNULL(CAST(StewardID AS VARCHAR(10)),'0') StewardID, ISNULL(StewardName,'') StewardName,
                    ISNULL(Packs,1) Packs, StartTime, RecDate,
-                   ISNULL(MobileNo,'') MobileNo
+                   ISNULL(MobileNo,'') MobileNo,
+                   ISNULL(Customer,'') Customer
             FROM TempItemDet
             WHERE LocationID = @LocationID
               AND DocumentID IN (1,2,3,4,6,8,9,10) AND BillTypeID != 4
@@ -312,7 +313,8 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
         decimal billTotal = 0;
         long pieces = 0, soldQty = 0;
         int packs = 1;
-        string stewardID = "", stewardName = "", tagNo = "", mobileNo = "";
+        string stewardID = "", stewardName = "", tagNo = "", mobileNo = "", customer = "";
+        DateTime? firstRecDate = null, firstStartTime = null;
 
         foreach (var r in rows)
         {
@@ -321,6 +323,10 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
             if (stewardID == "" || stewardID == "0") { stewardID = ((string)r.StewardID).Trim(); stewardName = ((string)r.StewardName).Trim(); }
             if (tagNo == "") tagNo = ((string)r.TagNo).Trim();
             if (mobileNo == "") mobileNo = ((string)r.MobileNo).Trim();
+            if (customer == "") customer = ((string)r.Customer).Trim();
+            // Mirror legacy: use RecDate + MIN(StartTime) from first non-DocumentID-10 row
+            if (docId != 10 && firstRecDate == null && r.RecDate is DateTime rd) firstRecDate = rd;
+            if (firstStartTime == null && r.StartTime is DateTime st) firstStartTime = st;
 
             if (docId == 1 || docId == 3) { billTotal += (decimal)r.Nett; pieces += (long)(decimal)r.Qty; soldQty++; }
             else if (docId == 2 || docId == 4) { billTotal -= (decimal)r.Nett; soldQty++; }
@@ -347,9 +353,12 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
             ));
         }
 
-        string orderStart = DateTime.Now.ToString("dd/MM/yyyy - HH:mm:ss");
+        // Mirror legacy: date from RecDate, time from MIN(StartTime)
+        var dateForDisplay  = firstRecDate   ?? DateTime.Now;
+        var timeForDisplay  = firstStartTime ?? DateTime.Now;
+        string orderStart = dateForDisplay.ToString("dd/MM/yyyy") + " - " + timeForDisplay.ToString("hh:mm:ss tt");
 
-        return new BillSummaryDto(items, billTotal, stewardID, stewardName, orderStart, tagNo, mobileNo, pieces, soldQty, packs);
+        return new BillSummaryDto(items, billTotal, stewardID, stewardName, orderStart, tagNo, mobileNo, pieces, soldQty, packs, customer);
     }
 
     public async Task<decimal> GetBillTotalAsync(int locationID, string receipt, int unitNo, int decimalPoints)

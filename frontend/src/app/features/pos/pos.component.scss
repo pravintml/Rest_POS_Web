@@ -52,10 +52,36 @@ $header-h: 52px;
     flex: 1;
 
     .pos-brand {
-      font-size: 1rem;
-      font-weight: 700;
-      color: $accent;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
       white-space: nowrap;
+      text-decoration: none;
+
+      .brand-mark { flex-shrink: 0; display: block; }
+
+      .brand-text {
+        display: flex;
+        align-items: baseline;
+        font-size: 0.95rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .brand-name {
+        color: #e8e8f0;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      .brand-product {
+        background: linear-gradient(135deg, #e63946 0%, #ff9f43 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
       i { margin-right: 0.3rem; }
     }
 
@@ -153,22 +179,61 @@ $header-h: 52px;
 
   .order-header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.625rem 1rem;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.55rem 1rem 0.5rem;
     background: $surface;
     border-bottom: 1px solid $border;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: $text-muted;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     flex-shrink: 0;
+
+    .oh-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: $text-muted;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
     .item-count {
       color: $accent;
       font-size: 0.75rem;
     }
+
+    .oh-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .oh-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .oh-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.28rem;
+      font-size: 0.7rem;
+      color: rgba(232,232,240,0.6);
+      white-space: nowrap;
+      flex: 1;
+
+      i { font-size: 0.72rem; }
+    }
+
+    .oh-start {
+      flex: unset;
+      i { color: #a78bfa; }   // purple — clock
+    }
+    .oh-mobile   i { color: #4dd4c4; }  // teal   — phone
+    .oh-customer i { color: #74b9ff; }  // blue   — person
+    .oh-packs    i { color: #ff9f43; }  // orange — box
+    .oh-tag      i { color: #f1c40f; }  // gold   — tag
   }
 
   .order-items {
@@ -320,7 +385,6 @@ $header-h: 52px;
     }
   }
 
-  .session-info { font-size: 0.65rem; color: $text-dim; font-variant-numeric: tabular-nums; }
   .order-title { font-weight: 700; color: $text-muted; letter-spacing: 0.5px; }
 
   // Mobile expand toggle — hidden on desktop, shown on mobile via responsive block
@@ -835,7 +899,7 @@ $header-h: 52px;
     .header-center .date { display: none; }
     .cashier-info .unit-badge { display: none; }
     .location-name { display: none; }
-    .pos-brand { font-size: 0.85rem; }
+    .pos-brand { .brand-text { font-size: 0.8rem; } .brand-mark { width: 28px; height: 28px; } }
   }
 
   .table-badge, .steward-badge { font-size: 0.65rem; }

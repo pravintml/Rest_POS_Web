@@ -23,7 +23,28 @@
   <!-- ── TOP BAR ─────────────────────────────────────────────────────── -->
   <header class="pos-header">
     <div class="header-left">
-      <span class="pos-brand"><i class="pi pi-shopping-cart"></i> SoftVinz Rest POS</span>
+      <div class="pos-brand">
+        <svg class="brand-mark" viewBox="0 0 36 36" width="34" height="34" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bgg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#e63946"/>
+              <stop offset="100%" stop-color="#ff9f43"/>
+            </linearGradient>
+          </defs>
+          <rect width="36" height="36" rx="9" fill="url(#bgg)"/>
+          <!-- fork -->
+          <line x1="10" y1="7" x2="10" y2="14" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+          <line x1="14" y1="7" x2="14" y2="14" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M10 14 Q12 17 12 20 L12 29" stroke="white" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+          <path d="M14 14 Q12 17 12 20" stroke="white" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+          <!-- knife -->
+          <path d="M22 7 Q27 10 26 16 L24 17 L24 29" stroke="white" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+          <line x1="24" y1="17" x2="26" y2="16" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        <span class="brand-text">
+          <span class="brand-name">SoftVinz</span><span class="brand-product"> Rest POS</span>
+        </span>
+      </div>
       <span class="location-name" [style.--icv]="locationColor(locationIDBillingName() || locationName())">
         <i class="pi" [ngClass]="locationIcon(locationIDBillingName() || locationName())"></i>{{ locationName() }}
       </span>
@@ -311,13 +332,38 @@
     <section class="order-panel">
 
       <div class="order-header" (click)="toggleBillMobile()">
-        <span class="order-title">ORDER</span>
-        <span class="session-info">R#{{ config()?.receipt ?? '' }} | Z#{{ config()?.zno ?? '' }}</span>
-        @if (itemCount() > 0) {
-          <span class="item-count">{{ itemCount() | number:'1.0-0' }} ITEMS</span>
+        <div class="oh-top">
+          <span class="order-title">ORDER</span>
+          @if (itemCount() > 0) {
+            <span class="item-count">{{ itemCount() | number:'1.0-0' }} ITEMS</span>
+          }
+          <i class="pi pi-chevron-up mobile-bill-toggle" [class.rotated]="showBillMobile()"></i>
+        </div>
+        @if (orderStart()) {
+          <div class="oh-meta">
+            <div class="oh-row">
+              <span class="oh-chip oh-start">
+                <i class="pi pi-clock"></i>{{ orderStart() }}
+              </span>
+            </div>
+            <div class="oh-row">
+              <span class="oh-chip oh-mobile">
+                <i class="pi pi-mobile"></i>{{ billMobileNo() || '—' }}
+              </span>
+              <span class="oh-chip oh-customer">
+                <i class="pi pi-user"></i>{{ billCustomer() || '—' }}
+              </span>
+            </div>
+            <div class="oh-row">
+              <span class="oh-chip oh-packs">
+                <i class="pi pi-box"></i>{{ billPacks() }}
+              </span>
+              <span class="oh-chip oh-tag">
+                <i class="pi pi-tag"></i>{{ billTagNo() || '—' }}
+              </span>
+            </div>
+          </div>
         }
-        <i class="pi pi-chevron-up mobile-bill-toggle"
-           [class.rotated]="showBillMobile()"></i>
       </div>
 
       <div class="order-items" [class.loading]="billLoading()"

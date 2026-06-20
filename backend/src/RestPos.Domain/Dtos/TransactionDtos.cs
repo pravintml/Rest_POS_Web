@@ -343,7 +343,8 @@ public record BillSummaryDto(
     string MobileNo,
     long Pieces,
     long SoldQty,
-    int Packs
+    int Packs,
+    string Customer
 );
 
 public record SaveInvoiceResult(bool Success, string ReceiptNo, string Error = "");

@@ -107,6 +107,13 @@ export class PosComponent implements OnInit, OnDestroy {
   readonly billTotal = signal(0);
   readonly selectedRowNo = signal<number | null>(null);
 
+  // ── Bill header info (START, MOBILE #, CUSTOMER, PACKS, TAG #) ───────────
+  readonly orderStart  = signal('');
+  readonly billMobileNo = signal('');
+  readonly billCustomer = signal('');
+  readonly billPacks   = signal(1);
+  readonly billTagNo   = signal('');
+
   // ── Input ────────────────────────────────────────────────────────────────
   readonly numpadBuffer = signal('');
   readonly productSearching = signal(false);
@@ -570,6 +577,11 @@ export class PosComponent implements OnInit, OnDestroy {
           this.stewardId.set(+summary.stewardID || 0);
           this.stewardName.set(summary.stewardName);
         }
+        this.orderStart.set(summary.orderStart);
+        this.billMobileNo.set(summary.mobileNo);
+        this.billCustomer.set(summary.customer);
+        this.billPacks.set(summary.packs);
+        this.billTagNo.set(summary.tagNo);
         this.billLoading.set(false);
       },
       error: () => this.billLoading.set(false)
@@ -1358,6 +1370,11 @@ export class PosComponent implements OnInit, OnDestroy {
     this.stewardId.set(0);
     this.stewardName.set('');
     this.selectedRowNo.set(null);
+    this.orderStart.set('');
+    this.billMobileNo.set('');
+    this.billCustomer.set('');
+    this.billPacks.set(1);
+    this.billTagNo.set('');
   }
 
   resetToTables() {
