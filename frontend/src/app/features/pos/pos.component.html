@@ -207,68 +207,66 @@
           <button class="act-btn nav-btn tbl-nav" (click)="goToTables()" [disabled]="busy()">
             <i class="pi pi-table"></i> TABLES
           </button>
-          <button class="act-btn" (click)="newBill()" [disabled]="busy()">NEW</button>
-          <div class="act-btn dim">CUSTOMER</div>
+          <button class="act-btn" (click)="newBill()" [disabled]="busy()"><i class="pi pi-file"></i> NEW</button>
+          <div class="act-btn dim"><i class="pi pi-user"></i> CUSTOMER</div>
           <div class="act-btn-row">
             <button class="act-btn half" (click)="increaseQty()" [disabled]="!selectedLine() || busy()">+</button>
             <button class="act-btn half" (click)="decreaseQty()" [disabled]="!selectedLine() || busy()">-</button>
           </div>
-          <button class="act-btn" (click)="openComment()" [disabled]="!selectedLine() || busy()">COMMENT</button>
+          <button class="act-btn" (click)="openComment()" [disabled]="!selectedLine() || busy()"><i class="pi pi-comment"></i> COMMENT</button>
           <button class="act-btn danger"
             (click)="voidSelectedItem()" [disabled]="!selectedLine() || busy()">
-            VOID
+            <i class="pi pi-ban"></i> VOID
           </button>
           <button class="act-btn"
             (click)="removeServiceCharge()" [disabled]="orderItems().length === 0 || busy()">
-            REMOVE SERVICE CHARGE
+            <i class="pi pi-minus-circle"></i> REMOVE SERVICE CHARGE
           </button>
           <button class="act-btn danger-outline"
             (click)="voidBill()" [disabled]="orderItems().length === 0 || busy()">
-            CLEAR
+            <i class="pi pi-trash"></i> CLEAR
           </button>
           <button class="act-btn" (click)="openChangeTable()" [disabled]="orderItems().length === 0 || busy()">
-            CHANGE TABLE
+            <i class="pi pi-arrows-h"></i> CHANGE TABLE
           </button>
           <button class="act-btn"
             (click)="splitQty()" [disabled]="!selectedLine() || busy()">
-            SPLIT QTY
+            <i class="pi pi-clone"></i> SPLIT QTY
           </button>
-          <button class="act-btn" (click)="moveSelectedItem()" [disabled]="!selectedLine() || busy()">MOVE</button>
-          <button class="act-btn" (click)="openMerge()" [disabled]="orderItems().length === 0 || busy()">MERGE</button>
-          <button class="act-btn" (click)="updateTag(codeInput.value)" [disabled]="orderItems().length === 0 || busy()">TAG</button>
-          <button class="act-btn" (click)="updatePacks()" [disabled]="orderItems().length === 0 || busy()">PACKS</button>
-          <button class="act-btn" (click)="updateMobileNo(codeInput.value)" [disabled]="orderItems().length === 0 || busy()">MOBILE NO</button>
-          <button class="act-btn more-btn" (click)="showMore.set(true)">MORE</button>
+          <button class="act-btn" (click)="moveSelectedItem()" [disabled]="!selectedLine() || busy()"><i class="pi pi-arrow-right"></i> MOVE</button>
+          <button class="act-btn" (click)="openMerge()" [disabled]="orderItems().length === 0 || busy()"><i class="pi pi-link"></i> MERGE</button>
+          <button class="act-btn" (click)="updateTag(codeInput.value)" [disabled]="orderItems().length === 0 || busy()"><i class="pi pi-tag"></i> TAG</button>
+          <button class="act-btn" (click)="updatePacks()" [disabled]="orderItems().length === 0 || busy()"><i class="pi pi-box"></i> PACKS</button>
+          <button class="act-btn" (click)="updateMobileNo(codeInput.value)" [disabled]="orderItems().length === 0 || busy()"><i class="pi pi-mobile"></i> MOBILE NO</button>
+          <button class="act-btn more-btn" (click)="showMore.set(true)"><i class="pi pi-ellipsis-h"></i> MORE</button>
         } @else {
           <!-- ── More panel ── -->
-          <button class="act-btn less-btn" (click)="showMore.set(false)">
-            <i class="pi pi-arrow-left"></i> LESS
-          </button>
-          <div class="act-btn dim">BACKUP DB</div>
-          <div class="act-btn dim">PAID OUT</div>
-          <div class="act-btn dim">PAID IN</div>
-          <button class="act-btn" (click)="openMenu()" [disabled]="busy()">MENU</button>
-          <button class="act-btn" (click)="reprintInvoice()">REPRINT INVOICE</button>
-          <button class="act-btn" (click)="shiftEnd()" [disabled]="busy()">SHIFT END</button>
-          <button class="act-btn less-btn" (click)="showMore.set(false)">CANCEL</button>
-          <button class="act-btn"
-            (click)="removeDiscount()" [disabled]="orderItems().length === 0 || busy()">
-            REMOVE DISCOUNT
+          <button class="act-btn disc-amt-btn"
+            (click)="openDiscountAmount()" [disabled]="orderItems().length === 0 || busy()">
+            <i class="pi pi-dollar"></i> DISCOUNT
           </button>
           <button class="act-btn disc-pct-btn"
             (click)="openDiscountPercent()" [disabled]="orderItems().length === 0 || busy()">
-            DISCOUNT %
-          </button>
-          <button class="act-btn disc-amt-btn"
-            (click)="openDiscountAmount()" [disabled]="orderItems().length === 0 || busy()">
-            DISCOUNT
+            <i class="pi pi-percentage"></i> DISCOUNT %
           </button>
           <button class="act-btn" (click)="openDiscountLevel()" [class.active-level]="discountLevelId() > 0">
-            {{ discountLevelLabel() }}
+            <i class="pi pi-sliders-h"></i> {{ discountLevelLabel() }}
           </button>
           <button class="act-btn"
+            (click)="removeDiscount()" [disabled]="orderItems().length === 0 || busy()">
+            <i class="pi pi-minus-circle"></i> REMOVE DISCOUNT
+          </button>
+          <button class="act-btn" (click)="reprintInvoice()"><i class="pi pi-print"></i> REPRINT INVOICE</button>
+          <button class="act-btn"
             (click)="openChangePrice()" [disabled]="!selectedLine() || busy()">
-            CHANGE PRICE
+            <i class="pi pi-pencil"></i> CHANGE PRICE
+          </button>
+          <div class="act-btn dim"><i class="pi pi-arrow-circle-down"></i> PAID IN</div>
+          <div class="act-btn dim"><i class="pi pi-arrow-circle-up"></i> PAID OUT</div>
+          <button class="act-btn" (click)="openMenu()" [disabled]="busy()"><i class="pi pi-book"></i> MENU</button>
+          <button class="act-btn" (click)="shiftEnd()" [disabled]="busy()"><i class="pi pi-power-off"></i> SHIFT END</button>
+          <button class="act-btn less-btn" (click)="showMore.set(false)">
+            <i class="pi pi-arrow-left"></i> LESS
           </button>
         }
       </div>
@@ -549,3 +547,9 @@
   [locationIDBilling]="locationIDBilling()"
   [shiftNo]="0"
   (closed)="showMenuDialog.set(false)" />
+
+<app-reprint-dialog
+  [visible]="showReprintDialog()"
+  [locationIDBilling]="locationIDBilling()"
+  (invoiceSelected)="onReprintSelected($event)"
+  (closed)="onReprintClosed()" />

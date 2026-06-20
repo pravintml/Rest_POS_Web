@@ -383,6 +383,31 @@ $header-h: 52px;
 
   i { font-size: 0.8rem; flex-shrink: 0; }
 
+  // ── Per-icon accent colors (semantic) ──
+  .pi-file          { color: #2dc653; } // NEW — green
+  .pi-comment       { color: #a78bfa; } // COMMENT — purple
+  .pi-ban,
+  .pi-trash,
+  .pi-power-off     { color: #ff6b6b; } // destructive — red
+  .pi-minus-circle  { color: #ff9f43; } // remove charge/discount — orange
+  .pi-arrows-h,
+  .pi-link,
+  .pi-mobile        { color: #4dd4c4; } // teal
+  .pi-clone,
+  .pi-percentage    { color: #f1c40f; } // gold
+  .pi-arrow-right   { color: #5dade2; } // MOVE — sky
+  .pi-tag           { color: #ff6b9d; } // TAG — pink
+  .pi-box           { color: #ffb74d; } // PACKS — amber
+  .pi-database      { color: #9ccc65; } // BACKUP — leaf
+  .pi-arrow-circle-up   { color: #ff9f43; } // PAID OUT — orange
+  .pi-arrow-circle-down { color: #2dc653; } // PAID IN — green
+  .pi-book,
+  .pi-pencil        { color: #74b9ff; } // blue
+  .pi-print         { color: #a78bfa; } // REPRINT — purple
+  .pi-dollar        { color: #2dc653; } // DISCOUNT — green
+  .pi-sliders-h     { color: #a5b4fc; } // discount level — indigo
+  .pi-user          { color: #74b9ff; } // CUSTOMER — blue
+
   &:hover:not([disabled]) {
     background: linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%);
     border-color: rgba(255,255,255,0.22);
