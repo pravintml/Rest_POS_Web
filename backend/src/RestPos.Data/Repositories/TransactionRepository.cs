@@ -626,7 +626,12 @@ public class TransactionRepository(IDbConnectionFactory db) : ITransactionReposi
                             ELSE 0 END) AS NetAmount,
                    MAX(Cashier)  AS Cashier,
                    UnitNo, TableID, TicketID,
-                   CONVERT(varchar(20), MAX(RecDate), 120) AS RecDate
+                   CONVERT(varchar(20), MAX(RecDate), 120) AS RecDate,
+                   CONVERT(varchar(22), MIN(StartTime), 120) AS StartTime,
+                   ISNULL(MAX(MobileNo),'')  AS MobileNo,
+                   ISNULL(MAX(Customer),'')  AS Customer,
+                   ISNULL(MAX(Packs),1)      AS Packs,
+                   ISNULL(MAX(TagNo),'')     AS TagNo
             FROM TransactionDet
             WHERE LocationID          = @LocationID
               AND LocationIDBilling   = @LocationIDBilling

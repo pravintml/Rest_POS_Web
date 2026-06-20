@@ -366,7 +366,12 @@ public record InvoiceSummaryDto(
     int UnitNo,
     int TableID,
     long TicketID,
-    string RecDate
+    string RecDate,
+    string StartTime,
+    string MobileNo,
+    string Customer,
+    int Packs,
+    string TagNo
 );
 
 public record SavedPaymentLineDto(

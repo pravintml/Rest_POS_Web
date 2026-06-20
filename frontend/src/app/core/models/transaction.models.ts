@@ -26,6 +26,11 @@ export interface InvoiceSummaryDto {
   tableID: number;
   ticketID: number;
   recDate: string;
+  startTime: string;
+  mobileNo: string;
+  customer: string;
+  packs: number;
+  tagNo: string;
 }
 
 export interface SavedPaymentLineDto {
