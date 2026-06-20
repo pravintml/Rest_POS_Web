@@ -24,6 +24,19 @@ export interface PaymentDialogContext {
   decimalPoints: number;
   tableName: string;
   cashierName: string;
+  orderStart: string;
+  mobileNo: string;
+  customer: string;
+  packs: number;
+  tagNo: string;
+}
+
+interface BillDisplayRow {
+  kind: 'item' | 'discount' | 'sc' | 'subtotal';
+  data?: OrderLineDto;
+  amount?: number;
+  isFinal?: boolean;
+  i?: number;
 }
 
 // Emitted when sale is complete, carrying the finalized tender lines
@@ -42,52 +55,98 @@ export type PaymentCompleteEvent = PaymentLineDto[];
 
   <!-- ══ LEFT: Bill panel ════════════════════════════════════════════ -->
   <div class="pay-bill">
-    <div class="bill-header">
-      <div class="bh-table"><i class="pi pi-table"></i> {{ ctx?.tableName || 'Table ' + ctx?.tableID }}</div>
-      <div class="bh-cashier"><i class="pi pi-user"></i> {{ ctx?.cashierName }}</div>
-      <div class="bh-receipt">R# {{ ctx?.receipt }}</div>
+
+    <!-- ORDER header (matches POS order panel) -->
+    <div class="bill-order-header">
+      <div class="oh-top">
+        <span class="order-title">ORDER</span>
+        @if (itemCount() > 0) {
+          <span class="item-count">{{ itemCount() | number:'1.0-0' }} ITEMS</span>
+        }
+      </div>
+      @if (ctx?.orderStart) {
+        <div class="oh-meta">
+          <div class="oh-row">
+            <span class="oh-chip oh-start">
+              <i class="pi pi-clock"></i>{{ ctx?.orderStart }}
+            </span>
+          </div>
+          <div class="oh-row">
+            <span class="oh-chip oh-mobile">
+              <i class="pi pi-mobile"></i>{{ ctx?.mobileNo || '—' }}
+            </span>
+            <span class="oh-chip oh-customer">
+              <i class="pi pi-user"></i>{{ ctx?.customer || '—' }}
+            </span>
+          </div>
+          <div class="oh-row">
+            <span class="oh-chip oh-packs">
+              <i class="pi pi-box"></i>{{ ctx?.packs }}
+            </span>
+            <span class="oh-chip oh-tag">
+              <i class="pi pi-tag"></i>{{ ctx?.tagNo || '—' }}
+            </span>
+          </div>
+        </div>
+      }
     </div>
 
+    <!-- Item list (order-panel style) -->
     <div class="bill-scroll">
-      <!-- Original items -->
-      @for (item of orderItems; track item.rowNo) {
-        @if (item.documentID === 1 || item.documentID === 3) {
-          <div class="bill-row item-row">
-            <span class="br-desc">{{ item.qty % 1 === 0 ? item.qty.toFixed(0) : item.qty.toFixed(3) }}&nbsp;{{ item.descrip }}</span>
-            <span class="br-amt">{{ item.nett | number:'1.' + dp() + '-' + dp() }}</span>
+      @for (row of billDisplayRows(); track $index) {
+        @if (row.kind === 'item') {
+          <div class="order-item" [class.return-item]="row.data!.documentID === 2 || row.data!.documentID === 4">
+            <div class="item-row1">
+              <span class="item-name">{{ row.data!.descrip }}</span>
+            </div>
+            <div class="item-row2">
+              <span class="item-qty-price">{{ row.data!.qty | number:'1.0-3' }} × {{ row.data!.price | number:'1.' + dp() + '-' + dp() }}</span>
+              @if (row.data!.discount > 0) {
+                <span class="item-disc">-{{ row.data!.discount | number:'1.2-2' }}</span>
+              }
+              <span class="item-nett">{{ row.data!.nett | number:'1.' + dp() + '-' + dp() }}</span>
+            </div>
           </div>
-        } @else if (item.documentID === 2 || item.documentID === 4) {
-          <div class="bill-row item-row return-row">
-            <span class="br-desc">{{ item.qty % 1 === 0 ? item.qty.toFixed(0) : item.qty.toFixed(3) }}&nbsp;{{ item.descrip }} (RETURN)</span>
-            <span class="br-amt">-{{ item.nett | number:'1.' + dp() + '-' + dp() }}</span>
+        } @else if (row.kind === 'discount') {
+          <div class="order-item discount-row">
+            <div class="bill-special-row">
+              <span class="special-badge disc-badge">DISC</span>
+              <span class="special-desc">{{ row.data!.descrip }}</span>
+              <span class="special-amount disc-amount">-{{ row.data!.nett | number:'1.' + dp() + '-' + dp() }}</span>
+            </div>
           </div>
-        } @else if (item.documentID === 6) {
-          <div class="bill-row disc-row">
-            <span class="br-desc">{{ item.descrip || 'DISCOUNT' }}</span>
-            <span class="br-amt disc-amt">-{{ item.nett | number:'1.' + dp() + '-' + dp() }}</span>
+        } @else if (row.kind === 'sc') {
+          <div class="order-item sc-row">
+            <div class="bill-special-row">
+              <span class="special-badge sc-badge">SC</span>
+              <span class="special-desc">SERVICE CHARGE</span>
+              <span class="special-amount sc-amount">{{ row.data!.nett | number:'1.' + dp() + '-' + dp() }}</span>
+            </div>
           </div>
-        } @else if (item.documentID === 9 || item.documentID === 10) {
-          <div class="bill-row sc-row">
-            <span class="br-desc">SERVICE CHARGE</span>
-            <span class="br-amt">{{ item.nett | number:'1.' + dp() + '-' + dp() }}</span>
+        } @else {
+          <div class="order-item subtotal-row" [class.final-total]="row.isFinal">
+            <div class="bill-special-row">
+              <span class="special-desc sub-label">SUB TOTAL</span>
+              <span class="special-amount sub-amount">{{ row.amount! | number:'1.' + dp() + '-' + dp() }}</span>
+            </div>
           </div>
         }
       }
-      <!-- Bill subtotal (= bill total before any payments) -->
-      <div class="bill-row subtotal-row">
-        <span>SUB TOTAL</span>
-        <span>{{ _billTotal() | number:'1.' + dp() + '-' + dp() }}</span>
-      </div>
 
-      <!-- Running tenders with subtotal after each -->
+      <!-- Running payment tenders -->
       @for (entry of runningBill(); track $index) {
-        <div class="bill-row tender-row">
-          <span class="br-desc">{{ entry.descrip }}{{ entry.refNo ? ' ' + entry.refNo : '' }}</span>
-          <span class="br-amt">{{ entry.amount | number:'1.' + dp() + '-' + dp() }}</span>
+        <div class="order-item tender-row">
+          <div class="bill-special-row">
+            <span class="special-badge pay-badge">PAY</span>
+            <span class="special-desc">{{ entry.descrip }}{{ entry.refNo ? ' ' + entry.refNo : '' }}</span>
+            <span class="special-amount">{{ entry.amount | number:'1.' + dp() + '-' + dp() }}</span>
+          </div>
         </div>
-        <div class="bill-row subtotal-row">
-          <span>SUB TOTAL</span>
-          <span [class.zero-bal]="entry.remaining <= 0">{{ entry.remaining | number:'1.' + dp() + '-' + dp() }}</span>
+        <div class="order-item balance-row">
+          <div class="bill-special-row">
+            <span class="special-desc sub-label">BALANCE</span>
+            <span class="special-amount sub-amount" [class.zero-bal]="entry.remaining <= 0">{{ entry.remaining | number:'1.' + dp() + '-' + dp() }}</span>
+          </div>
         </div>
       }
     </div>
@@ -203,7 +262,7 @@ export type PaymentCompleteEvent = PaymentLineDto[];
   styles: [`
     /* ── Full-screen overlay ─────────────────────────────────────── */
     .pay-screen {
-      position: fixed; inset: 0; z-index: 1000;
+      position: fixed; inset: 52px 0 0 0; z-index: 1000;
       display: grid;
       grid-template-columns: 28% 1fr 24%;
       background: #0f1117;
@@ -215,45 +274,115 @@ export type PaymentCompleteEvent = PaymentLineDto[];
     /* ── Bill panel (left) ───────────────────────────────────────── */
     .pay-bill {
       display: flex; flex-direction: column;
-      background: #161c25; border-right: 1px solid #2a3244;
-      overflow: hidden;
+      background: #0d0d14; border-right: 1px solid rgba(255,255,255,0.07);
+      overflow: hidden; font-family: 'Inter', -apple-system, sans-serif;
     }
-    .bill-header {
-      padding: 0.6rem 0.75rem; background: #1e2634; border-bottom: 1px solid #2a3244;
-      font-size: 0.78rem; display: flex; flex-direction: column; gap: 0.2rem;
-    }
-    .bh-table  { font-size: 0.95rem; font-weight: 700; color: #7dd3fc; }
-    .bh-cashier { color: #94a3b8; }
-    .bh-receipt { color: #64748b; font-size: 0.72rem; }
 
-    .bill-scroll { flex: 1; overflow-y: auto; padding: 0.25rem 0; }
-
-    .bill-row {
-      display: flex; justify-content: space-between; align-items: baseline;
-      padding: 0.18rem 0.65rem; font-size: 0.78rem;
+    /* ORDER-style header */
+    .bill-order-header {
+      display: flex; flex-direction: column; gap: 0.3rem;
+      padding: 0.55rem 1rem 0.5rem;
+      background: #1a1a28; border-bottom: 1px solid rgba(255,255,255,0.07);
+      flex-shrink: 0;
     }
-    .bill-row .br-desc { flex: 1; margin-right: 0.5rem; word-break: break-word; }
-    .bill-row .br-amt  { white-space: nowrap; font-weight: 500; }
-    .item-row   { color: #cbd5e1; }
-    .return-row { color: #94a3b8; font-style: italic; }
-    .disc-row   { color: #f87171; }
-    .sc-row     { color: #c084fc; }
-    .tender-row { color: #93c5fd; font-weight: 600; }
+    .oh-top {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 0.8rem; font-weight: 700;
+      color: rgba(232,232,240,0.45); text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .order-title { font-weight: 700; color: rgba(232,232,240,0.45); letter-spacing: 0.5px; }
+    .item-count  { color: #e63946; font-size: 0.75rem; }
+    .oh-meta { display: flex; flex-direction: column; gap: 0.2rem; }
+    .oh-row  { display: flex; align-items: center; gap: 1rem; }
+    .oh-chip {
+      display: inline-flex; align-items: center; gap: 0.28rem;
+      font-size: 0.7rem; color: rgba(232,232,240,0.6); white-space: nowrap; flex: 1;
+    }
+    .oh-chip i { font-size: 0.72rem; }
+    .oh-start   { flex: unset; } .oh-start   i { color: #a78bfa; }
+    .oh-mobile  i { color: #4dd4c4; }
+    .oh-customer i { color: #74b9ff; }
+    .oh-packs   i { color: #ff9f43; }
+    .oh-tag     i { color: #f1c40f; }
+
+    /* Item scroll */
+    .bill-scroll {
+      flex: 1; overflow-y: auto; padding: 0.5rem 0;
+    }
+    .bill-scroll::-webkit-scrollbar { width: 4px; }
+    .bill-scroll::-webkit-scrollbar-track { background: transparent; }
+    .bill-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+    /* Order items — matches pos order panel */
+    .order-item {
+      display: flex; flex-direction: column;
+      padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.07);
+      gap: 0.2rem; cursor: default;
+    }
+    .order-item.return-item { color: #ff9999; }
+
+    .item-row1 { display: flex; align-items: center; gap: 0.4rem; }
+    .item-name { flex: 1; font-size: 0.875rem; color: #e8e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .item-row2 { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; }
+    .item-qty-price { color: rgba(232,232,240,0.45); flex: 1; }
+    .item-disc  { color: #ff9999; font-size: 0.75rem; }
+    .item-nett  { font-weight: 700; font-variant-numeric: tabular-nums; color: #e8e8f0; margin-left: auto; }
+
+    /* Special rows */
+    .bill-special-row {
+      display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem;
+    }
+    .special-badge {
+      font-size: 0.6rem; font-weight: 800; letter-spacing: 0.5px;
+      padding: 0.1rem 0.35rem; border-radius: 3px; flex-shrink: 0;
+    }
+    .special-desc { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .special-amount { font-weight: 700; font-variant-numeric: tabular-nums; margin-left: auto; }
+    .sub-label { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .discount-row { background: rgba(230,57,70,0.05); }
+    .disc-badge  { background: rgba(230,57,70,0.2); color: #f28090; }
+    .disc-amount { color: #f28090; }
+
+    .sc-row { background: rgba(99,102,241,0.05); }
+    .sc-badge  { background: rgba(99,102,241,0.2); color: #a5b4fc; }
+    .sc-amount { color: #a5b4fc; }
+
     .subtotal-row {
-      color: #64748b; font-size: 0.72rem; font-style: italic;
-      border-bottom: 1px dotted #2a3244; margin-bottom: 0.15rem; padding-bottom: 0.18rem;
+      background: rgba(255,255,255,0.03); padding-top: 0.35rem; padding-bottom: 0.35rem;
     }
-    .subtotal-row .zero-bal { color: #4ade80; font-weight: 700; }
+    .subtotal-row .sub-label  { color: rgba(232,232,240,0.45); }
+    .subtotal-row .sub-amount { color: rgba(232,232,240,0.45); }
 
-    .bill-footer { border-top: 2px solid #334155; padding: 0.4rem 0.65rem; }
+    .final-total {
+      background: rgba(45,198,83,0.08);
+      border-top: 1px solid rgba(45,198,83,0.25); border-bottom: none;
+    }
+    .final-total .sub-label  { color: #2dc653; font-size: 0.85rem; }
+    .final-total .sub-amount { color: #2dc653; font-size: 0.95rem; }
+
+    .tender-row { background: rgba(59,130,246,0.08); }
+    .pay-badge  { background: rgba(59,130,246,0.2); color: #93c5fd; }
+    .tender-row .special-amount { color: #93c5fd; }
+
+    .balance-row { background: rgba(255,255,255,0.02); padding-top: 0.2rem; padding-bottom: 0.2rem; }
+    .balance-row .sub-label  { color: rgba(232,232,240,0.45); }
+    .balance-row .sub-amount { color: rgba(232,232,240,0.45); }
+    .zero-bal { color: #4ade80 !important; font-weight: 700; }
+
+    /* Footer */
+    .bill-footer { border-top: 2px solid rgba(255,255,255,0.07); padding: 0.5rem 1rem; flex-shrink: 0; }
     .bill-total-row {
       display: flex; justify-content: space-between;
-      font-size: 1.05rem; font-weight: 700; color: #f59e0b;
+      font-size: 1.1rem; font-weight: 700; color: #f59e0b;
+      font-variant-numeric: tabular-nums;
     }
     .bill-total-row.balanced { color: #4ade80; }
     .bill-change-row {
       display: flex; justify-content: space-between;
-      font-size: 0.9rem; font-weight: 600; color: #818cf8; margin-top: 0.2rem;
+      font-size: 0.9rem; font-weight: 600; color: #818cf8; margin-top: 0.25rem;
+      font-variant-numeric: tabular-nums;
     }
 
     /* ── Center: Pay types + Notes ───────────────────────────────── */
@@ -396,13 +525,48 @@ export class PaymentDialogComponent implements OnChanges {
   readonly busy        = signal(false);
   readonly numpadStr   = signal('');
 
-  // billTotal mirrored into a signal so computed() can track it reactively
-  protected readonly _billTotal = signal(0);
+  // mirrored inputs so computed() can track them (plain @Input() is not trackable)
+  protected readonly _billTotal    = signal(0);
+  private   readonly _orderItems   = signal<OrderLineDto[]>([]);
 
   refNoInput = '';
 
   // ── Computed ────────────────────────────────────────────────────────────
   readonly dp = computed(() => this.ctx?.decimalPoints ?? 2);
+
+  readonly itemCount = computed(() =>
+    this._orderItems().filter(i => i.documentID <= 4).reduce((s, i) => s + i.qty, 0)
+  );
+
+  readonly billDisplayRows = computed<BillDisplayRow[]>(() => {
+    const items = this._orderItems();
+    if (!items.length) return [];
+    const rows: BillDisplayRow[] = [];
+    let running = 0;
+    let prevGroup: 'item' | 'discount' | 'sc' | null = null;
+    let subIdx = 0;
+    for (const item of items) {
+      const group: 'item' | 'discount' | 'sc' =
+        item.documentID <= 4 ? 'item' : item.documentID === 6 ? 'discount' : 'sc';
+      if (prevGroup !== null && prevGroup !== group) {
+        rows.push({ kind: 'subtotal', amount: running, isFinal: false, i: subIdx++ });
+      }
+      switch (group) {
+        case 'item':
+          running += (item.documentID === 1 || item.documentID === 3) ? item.nett : -item.nett;
+          rows.push({ kind: 'item', data: item }); break;
+        case 'discount':
+          running -= item.nett;
+          rows.push({ kind: 'discount', data: item }); break;
+        case 'sc':
+          running += item.nett;
+          rows.push({ kind: 'sc', data: item }); break;
+      }
+      prevGroup = group;
+    }
+    rows.push({ kind: 'subtotal', amount: running, isFinal: true, i: subIdx });
+    return rows;
+  });
 
   readonly totalPaid = computed(() =>
     this.lines().reduce((s, l) => s + l.amount, 0));
@@ -435,6 +599,9 @@ export class PaymentDialogComponent implements OnChanges {
     }
     if (changes['payTypeList']) {
       this.payTypes.set(this.payTypeList);
+    }
+    if (changes['orderItems']) {
+      this._orderItems.set(this.orderItems);
     }
     if (changes['visible'] && this.visible) {
       this.reset();

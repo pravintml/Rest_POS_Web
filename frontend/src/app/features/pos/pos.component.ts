@@ -1264,7 +1264,12 @@ export class PosComponent implements OnInit, OnDestroy {
       billTotal: this.displayTotal(),
       decimalPoints: this.decimalPlaces(),
       tableName: this.tableName(),
-      cashierName: sess.name
+      cashierName: sess.name,
+      orderStart: this.orderStart(),
+      mobileNo: this.billMobileNo(),
+      customer: this.billCustomer(),
+      packs: this.billPacks(),
+      tagNo: this.billTagNo()
     });
     this.paymentLines.set([]);
     this.showPayment = true;
