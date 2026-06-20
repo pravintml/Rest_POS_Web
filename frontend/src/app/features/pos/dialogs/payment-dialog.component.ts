@@ -174,11 +174,13 @@ export type PaymentCompleteEvent = PaymentLineDto[];
       @for (pt of payTypes(); track pt.payTypeID) {
         <button class="pt-btn"
           [class.pt-selected]="selectedPayType()?.payTypeID === pt.payTypeID"
-          [class.pt-card]="pt.type === 1"
-          [class.pt-other]="pt.type === 6"
+          [style.--ptc]="ptIconColor(pt)"
           (click)="onPayTypeClick(pt)"
           [disabled]="busy()">
-          {{ pt.payTypeName }}
+          <span class="pt-icon-wrap">
+            <i class="pi pt-icon" [ngClass]="ptIconClass(pt)"></i>
+          </span>
+          <span class="pt-name">{{ pt.payTypeName }}</span>
         </button>
       }
     </div>
@@ -186,8 +188,13 @@ export type PaymentCompleteEvent = PaymentLineDto[];
     <!-- Denomination note buttons -->
     <div class="pay-notes-area">
       @for (n of notesList; track n) {
-        <button class="note-btn" (click)="onNoteClick(n)" [disabled]="busy()">
-          {{ n | number:'1.0-0' }}
+        <button class="note-btn" [style.--nc]="noteColor(n)" (click)="onNoteClick(n)" [disabled]="busy()">
+          <span class="note-ghost" aria-hidden="true">{{ n | number:'1.0-0' }}</span>
+          <span class="note-top">
+            <i class="pi pi-money-bill"></i>
+            <span class="note-currency">Rs.</span>
+          </span>
+          <span class="note-amount">{{ n | number:'1.0-0' }}</span>
         </button>
       }
     </div>
@@ -397,33 +404,116 @@ export type PaymentCompleteEvent = PaymentLineDto[];
       gap: 5px; padding: 10px; overflow-y: auto;
     }
     .pt-btn {
-      width: 100%; height: 100%;
-      padding: 0.4rem; border: none; border-radius: 5px;
-      background: #1e3a5f; color: #bde0ff; font-weight: 700;
-      font-size: 0.78rem; cursor: pointer; transition: all 0.12s;
-      text-align: center; letter-spacing: 0.02em; min-height: 3rem;
+      --ptc: #64748b;
+      width: 100%; height: 100%; min-height: 5rem;
+      padding: 0.6rem 0.35rem;
+      border: 1.5px solid rgba(255,255,255,0.07);
+      border-radius: 14px;
+      background: linear-gradient(160deg, color-mix(in srgb, var(--ptc) 14%, #0f1420) 0%, color-mix(in srgb, var(--ptc) 6%, #0a0e18) 100%);
+      color: rgba(232,232,240,0.65);
+      cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s, transform 0.12s;
+      position: relative; overflow: hidden;
     }
-    .pt-btn:hover:not(:disabled) { background: #2563eb; color: #fff; }
-    .pt-btn.pt-selected { background: #16a34a; color: #fff; box-shadow: 0 0 0 2px #4ade80; }
-    .pt-btn.pt-card { background: #1e1b4b; color: #a5b4fc; }
-    .pt-btn.pt-card.pt-selected { background: #4f46e5; color: #fff; }
-    .pt-btn.pt-other { background: #431407; color: #fdba74; }
-    .pt-btn.pt-other.pt-selected { background: #c2410c; color: #fff; }
-    .pt-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    /* subtle top sheen */
+    .pt-btn::before {
+      content: ''; position: absolute; top: 0; left: 15%; right: 15%; height: 1px;
+      background: rgba(255,255,255,0.07); pointer-events: none;
+    }
+
+    .pt-icon-wrap {
+      width: 2.6rem; height: 2.6rem; border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+      border: 1.5px solid rgba(255,255,255,0.10);
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      flex-shrink: 0;
+    }
+    .pt-icon {
+      font-size: 1.2rem;
+      color: var(--ptc);
+      transition: transform 0.15s, filter 0.15s;
+    }
+    .pt-name {
+      font-size: 0.64rem; font-weight: 700; letter-spacing: 0.04em;
+      line-height: 1.25; word-break: break-word; text-align: center;
+      color: rgba(232,232,240,0.65);
+      transition: color 0.15s;
+    }
+
+    /* Hover */
+    .pt-btn:hover:not(:disabled) {
+      border-color: var(--ptc);
+      background: linear-gradient(160deg, color-mix(in srgb, var(--ptc) 22%, #0f1420) 0%, color-mix(in srgb, var(--ptc) 10%, #0a0e18) 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    }
+    .pt-btn:hover:not(:disabled) .pt-icon-wrap {
+      border-color: var(--ptc);
+      background: rgba(255,255,255,0.1);
+    }
+    .pt-btn:hover:not(:disabled) .pt-icon { filter: brightness(1.2); transform: scale(1.08); }
+    .pt-btn:hover:not(:disabled) .pt-name { color: #e8e8f0; }
+
+    /* Selected */
+    .pt-btn.pt-selected {
+      border-color: var(--ptc);
+      background: linear-gradient(160deg, color-mix(in srgb, var(--ptc) 28%, #0f1420) 0%, color-mix(in srgb, var(--ptc) 13%, #0a0e18) 100%);
+      box-shadow: 0 0 0 1px var(--ptc), 0 0 22px -5px var(--ptc);
+      color: #fff; transform: none;
+    }
+    .pt-btn.pt-selected .pt-icon-wrap {
+      border-color: var(--ptc);
+      background: rgba(255,255,255,0.12);
+      box-shadow: 0 0 10px -3px var(--ptc);
+    }
+    .pt-btn.pt-selected .pt-icon { filter: drop-shadow(0 0 5px var(--ptc)); }
+    .pt-btn.pt-selected .pt-name { color: #fff; }
+
+    .pt-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
 
     .pay-notes-area {
       display: grid; grid-template-columns: repeat(4, 1fr);
       grid-auto-rows: 1fr;
-      gap: 5px; padding: 10px; border-top: 1px solid #2a3244; background: #111827;
+      gap: 5px; padding: 10px; border-top: 1px solid rgba(255,255,255,0.07); background: #080b14;
     }
     .note-btn {
-      width: 100%; height: 100%;
-      padding: 0.4rem; border: 1px solid #334155; border-radius: 4px;
-      background: #1e2634; color: #94a3b8; font-weight: 700; font-size: 0.82rem;
-      cursor: pointer; text-align: center; transition: all 0.1s; min-height: 5.2rem;
+      --nc: #16a34a;
+      width: 100%; height: 100%; min-height: 5rem;
+      padding: 0.55rem 0.7rem;
+      border: 1.5px solid rgba(255,255,255,0.07); border-radius: 12px;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--nc) 16%, #0a0e18) 0%, color-mix(in srgb, var(--nc) 6%, #060810) 100%);
+      cursor: pointer;
+      display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0.15rem;
+      position: relative; overflow: hidden;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s, transform 0.12s;
     }
-    .note-btn:hover:not(:disabled) { background: #0f766e; color: #fff; border-color: #14b8a6; }
-    .note-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .note-ghost {
+      position: absolute; right: -0.3rem; bottom: -0.6rem;
+      font-size: 3rem; font-weight: 900; line-height: 1;
+      color: var(--nc); opacity: 0.12;
+      pointer-events: none; font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+    }
+    .note-top {
+      display: flex; align-items: center; gap: 0.3rem;
+      font-size: 0.68rem; color: var(--nc); opacity: 0.85;
+    }
+    .note-top i { font-size: 0.72rem; }
+    .note-currency { font-weight: 700; letter-spacing: 0.04em; }
+    .note-amount {
+      font-size: 1.15rem; font-weight: 800; color: #e8e8f0;
+      font-variant-numeric: tabular-nums; letter-spacing: -0.01em; line-height: 1;
+    }
+    .note-btn:hover:not(:disabled) {
+      border-color: var(--nc);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--nc) 26%, #0a0e18) 0%, color-mix(in srgb, var(--nc) 11%, #060810) 100%);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 0 1px var(--nc);
+      transform: translateY(-1px);
+    }
+    .note-btn:hover:not(:disabled) .note-amount { color: #fff; }
+    .note-btn:hover:not(:disabled) .note-top { opacity: 1; }
+    .note-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
     /* ── Right: Numpad ───────────────────────────────────────────── */
     .pay-numpad {
@@ -515,6 +605,49 @@ export class PaymentDialogComponent implements OnChanges {
   private readonly msgSvc = inject(MessageService);
 
   readonly numKeys = ['7','8','9','4','5','6','1','2','3'];
+
+  noteColor(n: number): string {
+    if (n >= 5000) return '#7c3aed';   // violet   — 5000 note
+    if (n >= 2000) return '#db2777';   // pink     — 2000 note
+    if (n >= 1000) return '#2563eb';   // blue     — 1000 note
+    if (n >=  500) return '#16a34a';   // green    — 500 note
+    if (n >=  100) return '#b45309';   // amber    — 100 note
+    if (n >=   50) return '#9333ea';   // purple   — 50 note
+    if (n >=   20) return '#0d9488';   // teal     — 20 note
+    return '#475569';                  // slate    — 10 note
+  }
+
+  ptIconClass(pt: PayTypeDto): string {
+    if (pt.type === 0) return 'pi-wallet';
+    if (pt.type === 1) return 'pi-credit-card';
+    const n = pt.payTypeName.toUpperCase();
+    if (n.includes('CHEQUE') || n.includes('CHECK'))               return 'pi-file-edit';
+    if (n.includes('ONLINE') || n.includes('INTERNET') || n.includes('DIGITAL') || n.includes('BANK')) return 'pi-globe';
+    if (n.includes('MOBILE') || n.includes('PHONE'))               return 'pi-mobile';
+    if (n.includes('STAFF'))                                        return 'pi-id-card';
+    if (n.includes('COMPLI') || n.includes('COMP'))                return 'pi-gift';
+    if (n.includes('ROOM'))                                         return 'pi-building';
+    if (n.includes('ADVANCE') || n.includes('ADV'))                return 'pi-calendar';
+    if (n.includes('CREDIT'))                                       return 'pi-dollar';
+    if (n.includes('VOUCHER') || n.includes('COUPON'))             return 'pi-ticket';
+    return 'pi-tag';
+  }
+
+  ptIconColor(pt: PayTypeDto): string {
+    if (pt.type === 0) return '#4ade80';
+    if (pt.type === 1) return '#818cf8';
+    const n = pt.payTypeName.toUpperCase();
+    if (n.includes('CHEQUE') || n.includes('CHECK'))               return '#fbbf24';
+    if (n.includes('ONLINE') || n.includes('INTERNET') || n.includes('DIGITAL') || n.includes('BANK')) return '#22d3ee';
+    if (n.includes('MOBILE') || n.includes('PHONE'))               return '#34d399';
+    if (n.includes('STAFF'))                                        return '#a78bfa';
+    if (n.includes('COMPLI') || n.includes('COMP'))                return '#f472b6';
+    if (n.includes('ROOM'))                                         return '#60a5fa';
+    if (n.includes('ADVANCE') || n.includes('ADV'))                return '#fb923c';
+    if (n.includes('CREDIT'))                                       return '#facc15';
+    if (n.includes('VOUCHER') || n.includes('COUPON'))             return '#e879f9';
+    return '#fb923c';
+  }
 
   // ── Reactive state ─────────────────────────────────────────────────────
   readonly lines       = signal<PaymentLineDto[]>([]);
